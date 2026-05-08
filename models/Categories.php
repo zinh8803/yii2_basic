@@ -62,6 +62,15 @@ class Categories extends \yii\db\ActiveRecord
         ];
     }
 
+    public function fields()
+    {
+        return [
+            'id',
+            'name',
+            'children',
+        ];
+    }
+
     /**
      * Gets query for [[Categories]].
      *
@@ -80,6 +89,16 @@ class Categories extends \yii\db\ActiveRecord
     public function getParent()
     {
         return $this->hasOne(Categories::class, ['id' => 'parent_id']);
+    }
+
+    /**
+     * Gets query for [[Children]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getChildren()
+    {
+        return $this->hasMany(Categories::class, ['parent_id' => 'id']);
     }
 
     /**

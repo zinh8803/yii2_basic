@@ -11,8 +11,8 @@ use Yii;
  * @property string $name
  * @property string $slug
  * @property string $status
- * @property int $created_at
- * @property int $updated_at
+ * @property int|null $created_at
+ * @property int|null $updated_at
  *
  * @property Products[] $products
  */
@@ -34,8 +34,9 @@ class Brands extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
+            [['created_at', 'updated_at'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 'active'],
-            [['name', 'slug', 'created_at', 'updated_at'], 'required'],
+            [['name', 'slug'], 'required'],
             [['created_at', 'updated_at'], 'integer'],
             [['name', 'slug'], 'string', 'max' => 255],
             [['status'], 'string', 'max' => 50],

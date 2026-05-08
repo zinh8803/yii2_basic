@@ -72,6 +72,21 @@ class Products extends \yii\db\ActiveRecord
         ];
     }
 
+    public function fields()
+    {
+        return [
+            'id',
+            'name',
+            'category',
+            'brand',
+            'slug',
+            'description',
+            'status',
+            'created_at',
+            'updated_at',
+        ];
+    }
+
     /**
      * Gets query for [[Brand]].
      *
