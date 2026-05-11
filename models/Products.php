@@ -3,6 +3,9 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
+use app\models\Resources;
 
 /**
  * This is the model class for table "products".
@@ -44,13 +47,29 @@ class Products extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['category_id', 'brand_id', 'description', 'created_at', 'updated_at'], 'default', 'value' => null],
+            [['category_id', 'brand_id', 'description'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 1],
-            [['name', 'slug'], 'required'],
-            [['category_id', 'brand_id', 'status', 'created_at', 'updated_at'], 'integer'],
+            [['name', 'slug'], 'unique'],
+            [['category_id', 'brand_id', 'status'], 'integer'],
             [['name', 'slug', 'description'], 'string', 'max' => 255],
             [['brand_id'], 'exist', 'skipOnError' => true, 'targetClass' => Brands::class, 'targetAttribute' => ['brand_id' => 'id']],
             [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => Categories::class, 'targetAttribute' => ['category_id' => 'id']],
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+
+            [
+                'class' => SluggableBehavior::class,
+                'attribute' => 'name',
+                'slugAttribute' => 'slug',
+            ],
         ];
     }
 
@@ -95,6 +114,16 @@ class Products extends \yii\db\ActiveRecord
     public function getBrand()
     {
         return $this->hasOne(Brands::class, ['id' => 'brand_id']);
+    }
+
+    /**
+     * Gets resources (images) for this product.
+     * @return \yii\db\ActiveQuery
+     */
+    public function getResources()
+    {
+        return $this->hasMany(Resources::class, ['resource_id' => 'id'])
+            ->andWhere(['resource_type' => 'product']);
     }
 
     /**

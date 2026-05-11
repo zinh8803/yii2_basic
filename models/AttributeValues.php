@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "attribute_values".
@@ -43,6 +45,19 @@ class AttributeValues extends \yii\db\ActiveRecord
             [['value', 'slug'], 'string', 'max' => 255],
             [['color_hex'], 'string', 'max' => 10],
             [['attribute_id'], 'exist', 'skipOnError' => true, 'targetClass' => ProductAttributes::class, 'targetAttribute' => ['attribute_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+
+            [
+                'class' => SluggableBehavior::class,
+                'attribute' => 'value',
+                'slugAttribute' => 'slug',
+            ],
         ];
     }
 

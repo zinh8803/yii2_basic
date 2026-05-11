@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "product_variants".
@@ -43,14 +44,21 @@ class ProductVariants extends \yii\db\ActiveRecord
         return [
             [['sku', 'sale_price', 'cost_price', 'weight'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 'active'],
-            [['product_id', 'name', 'price', 'created_at', 'updated_at'], 'required'],
-            [['product_id', 'created_at', 'updated_at'], 'integer'],
+            [['product_id', 'name', 'price'], 'required'],
+            [['product_id'], 'integer'],
             [['price', 'sale_price', 'cost_price', 'weight'], 'number'],
             [['name'], 'string', 'max' => 255],
             [['sku'], 'string', 'max' => 100],
             [['status'], 'string', 'max' => 50],
             [['sku'], 'unique'],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
         ];
     }
 

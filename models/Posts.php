@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "posts".
@@ -46,12 +48,25 @@ class Posts extends \yii\db\ActiveRecord
             [['meta_title', 'meta_description', 'published_at'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 'draft'],
             [['post_style'], 'default', 'value' => 'standard'],
-            [['user_id', 'title', 'slug', 'excerpt', 'content', 'created_at', 'updated_at'], 'required'],
-            [['user_id', 'published_at', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'title', 'slug', 'excerpt', 'content'], 'required'],
+            [['user_id', 'published_at'], 'integer'],
             [['excerpt', 'content'], 'string'],
             [['title', 'slug', 'meta_title', 'meta_description'], 'string', 'max' => 255],
             [['status', 'post_style'], 'string', 'max' => 50],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+
+            [
+                'class' => SluggableBehavior::class,
+                'attribute' => 'title',
+                'slugAttribute' => 'slug',
+            ],
         ];
     }
 

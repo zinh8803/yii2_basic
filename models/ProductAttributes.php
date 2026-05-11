@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "product_attributes".
@@ -41,11 +43,23 @@ class ProductAttributes extends \yii\db\ActiveRecord
             [['slug'], 'default', 'value' => null],
             [['type'], 'default', 'value' => 'text'],
             [['sort_order'], 'default', 'value' => 0],
-            [['product_id', 'name', 'created_at', 'updated_at'], 'required'],
+            [['product_id', 'name'], 'required'],
             [['product_id', 'is_variant', 'sort_order', 'created_at', 'updated_at'], 'integer'],
             [['name', 'slug'], 'string', 'max' => 255],
             [['type'], 'string', 'max' => 50],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
+        ];
+    }
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+
+            [
+                'class' => SluggableBehavior::class,
+                'attribute' => 'name',
+                'slugAttribute' => 'slug',
+            ],
         ];
     }
 

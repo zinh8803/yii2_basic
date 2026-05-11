@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "coupons".
@@ -19,7 +20,7 @@ use Yii;
  * @property int $expires_at
  * @property int $is_active
  * @property int $created_at
- * @property int $update_at
+ * @property int $updated_at
  *
  * @property CouponUsages[] $couponUsages
  */
@@ -43,13 +44,28 @@ class Coupons extends \yii\db\ActiveRecord
         return [
             [['used_count'], 'default', 'value' => 0],
             [['is_active'], 'default', 'value' => 1],
-            [['code', 'type', 'value', 'min_order_value', 'max_discount', 'max_usage', 'starts_at', 'expires_at', 'created_at', 'update_at'], 'required'],
+            [['code', 'type', 'value', 'min_order_value', 'max_discount', 'max_usage', 'starts_at', 'expires_at'], 'required'],
             [['value', 'min_order_value', 'max_discount'], 'number'],
-            [['max_usage', 'used_count', 'starts_at', 'expires_at', 'is_active', 'created_at', 'update_at'], 'integer'],
+            [['max_usage', 'used_count', 'starts_at', 'expires_at', 'is_active'], 'integer'],
             [['code'], 'string', 'max' => 50],
             [['type'], 'string', 'max' => 20],
             [['code'], 'unique'],
         ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+        ];
+    }
+
+    public function afterFind()
+    {
+        parent::afterFind();
+
+        $this->starts_at = date('Y-m-d\TH:i', $this->starts_at);
+        $this->expires_at = date('Y-m-d\TH:i', $this->expires_at);
     }
 
     /**
@@ -70,7 +86,7 @@ class Coupons extends \yii\db\ActiveRecord
             'expires_at' => 'Expires At',
             'is_active' => 'Is Active',
             'created_at' => 'Created At',
-            'update_at' => 'Update At',
+            'updated_at' => 'Updated At',
         ];
     }
 

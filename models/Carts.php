@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "carts".
@@ -34,10 +35,17 @@ class Carts extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['user_id', 'total', 'created_at', 'updated_at'], 'required'],
-            [['user_id', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'total'], 'required'],
+            [['user_id'], 'integer'],
             [['total'], 'number'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
         ];
     }
 

@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "brands".
@@ -34,12 +36,26 @@ class Brands extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['created_at', 'updated_at'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 'active'],
             [['name', 'slug'], 'required'],
-            [['created_at', 'updated_at'], 'integer'],
             [['name', 'slug'], 'string', 'max' => 255],
             [['status'], 'string', 'max' => 50],
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+
+            [
+                'class' => SluggableBehavior::class,
+                'attribute' => 'name',
+                'slugAttribute' => 'slug',
+            ],
         ];
     }
 
@@ -55,6 +71,18 @@ class Brands extends \yii\db\ActiveRecord
             'status' => 'Status',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
+        ];
+    }
+
+    public function fields()
+    {
+        return [
+            'id',
+            'name',
+            'slug',
+            'status',
+            'created_at',
+            'updated_at',
         ];
     }
 
