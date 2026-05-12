@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "files".
@@ -42,11 +43,18 @@ class Files extends \yii\db\ActiveRecord
     {
         return [
             [['width', 'height'], 'default', 'value' => null],
-            [['user_id', 'disk', 'path', 'url', 'original_name', 'mime_type', 'size_bytes', 'created_at', 'updated_at'], 'required'],
-            [['user_id', 'size_bytes', 'width', 'height', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'disk', 'path', 'url', 'original_name', 'mime_type', 'size_bytes'], 'required'],
+            [['user_id', 'size_bytes', 'width', 'height'], 'integer'],
             [['disk'], 'string', 'max' => 50],
             [['path', 'url', 'original_name', 'mime_type'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+              TimestampBehavior::class,
         ];
     }
 

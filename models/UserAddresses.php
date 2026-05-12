@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "user_addresses".
@@ -37,12 +38,19 @@ class UserAddresses extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['user_id', 'city', 'ward', 'detail_address', 'phone_number', 'name_address', 'created_at', 'updated_at'], 'required'],
-            [['user_id', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'city', 'ward', 'detail_address', 'phone_number', 'name_address'], 'required'],
+            [['user_id'], 'integer'],
             [['city', 'ward'], 'string', 'max' => 100],
             [['detail_address', 'name_address'], 'string', 'max' => 255],
             [['phone_number'], 'string', 'max' => 20],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
         ];
     }
 

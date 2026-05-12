@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\SluggableBehavior;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "tags".
@@ -35,12 +37,23 @@ class Tags extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['name', 'slug', 'type', 'description', 'created_at', 'updated_at'], 'required'],
-            [['created_at', 'updated_at'], 'integer'],
+            [['name', 'slug', 'type', 'description'], 'required'],
             [['name', 'slug', 'type', 'description'], 'string', 'max' => 255],
             [['name'], 'unique'],
             [['slug'], 'unique'],
             [['description'], 'unique'],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
+            [
+                'class' => SluggableBehavior::class,
+                'attribute' => 'name',
+                'slugAttribute' => 'slug',
+            ],
         ];
     }
 

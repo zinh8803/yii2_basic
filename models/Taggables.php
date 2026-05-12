@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "taggables".
@@ -36,11 +37,18 @@ class Taggables extends \yii\db\ActiveRecord
     {
         return [
             [['post_id'], 'default', 'value' => null],
-            [['tag_id', 'type', 'created_at', 'updated_at'], 'required'],
-            [['tag_id', 'post_id', 'created_at', 'updated_at'], 'integer'],
+            [['tag_id', 'type'], 'required'],
+            [['tag_id', 'post_id'], 'integer'],
             [['type'], 'string', 'max' => 255],
             [['post_id'], 'exist', 'skipOnError' => true, 'targetClass' => Posts::class, 'targetAttribute' => ['post_id' => 'id']],
             [['tag_id'], 'exist', 'skipOnError' => true, 'targetClass' => Tags::class, 'targetAttribute' => ['tag_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
         ];
     }
 

@@ -3,6 +3,7 @@
 namespace app\controllers;
 
 use app\models\forms\Product\CreateProductForm;
+use app\models\forms\Product\UpdateProductForm;
 use app\models\Files;
 use app\models\Products;
 use app\models\Resources;
@@ -85,59 +86,77 @@ class ProductController extends Controller
                 $product->category_id = $form->category_id;
                 $product->brand_id = $form->brand_id;
 
-                if ($product->save()) {
+                $transaction = Yii::$app->db->beginTransaction();
+                try {
+                    if (!$product->save()) {
+                        foreach ($product->getErrors() as $attribute => $messages) {
+                            foreach ($messages as $message) {
+                                $form->addError($attribute, $message);
+                            }
+                        }
+                        throw new \RuntimeException('Failed to save product.');
+                    }
+
                     if ($form->imageFile !== null) {
-
-
                         $uploadDir = Yii::getAlias('@webroot/uploads/products');
                         FileHelper::createDirectory($uploadDir);
                         $fileName = Yii::$app->security->generateRandomString(16) . '.' . $form->imageFile->extension;
                         $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-                        if ($form->imageFile->saveAs($fullPath)) {
-                            $url = Yii::getAlias('@web/uploads/products/' . $fileName);
-                            $size = @getimagesize($fullPath);
 
-                            $file = new Files();
-                            $file->user_id = Yii::$app->user->id;
-                            $file->disk = 'local';
-                            $file->path = 'uploads/products/' . $fileName;
-                            $file->url = $url;
-                            $file->original_name = $form->imageFile->name;
-                            $file->mime_type = $form->imageFile->type;
-                            $file->size_bytes = $form->imageFile->size;
-                            $file->width = $size ? $size[0] : null;
-                            $file->height = $size ? $size[1] : null;
-                            $file->created_at = time();
-                            $file->updated_at = time();
-                            if ($file->save()) {
-                                $resource = new Resources();
-                                $resource->file_id = $file->id;
-                                $resource->resource_type = 'product';
-                                $resource->resource_id = $product->id;
-                                $resource->type = 'image';
-                                $resource->title = $file->original_name;
-                                $resource->alt_text = null;
-                                $resource->sort_order = 0;
-                                $resource->is_primary = 1;
-                                $resource->created_at = time();
-                                $resource->updated_at = time();
-                                if (!$resource->save()) {
-                                    $form->addError('imageFile', 'Failed to save image resource.');
-                                }
-                            } else {
-                                $form->addError('imageFile', 'Failed to save file record.');
-                            }
-                        } else {
+                        if (!$form->imageFile->saveAs($fullPath)) {
                             $form->addError('imageFile', 'Failed to upload image.');
+                            throw new \RuntimeException('Failed to upload image.');
+                        }
+
+                        $url = Yii::getAlias('@web/uploads/products/' . $fileName);
+                        $size = @getimagesize($fullPath);
+
+                        $file = new Files();
+                        $file->user_id = 9;
+                        $file->disk = 'local';
+                        $file->path = 'uploads/products/' . $fileName;
+                        $file->url = $url;
+                        $file->original_name = $form->imageFile->name;
+                        $file->mime_type = $form->imageFile->type;
+                        $file->size_bytes = $form->imageFile->size;
+                        $file->width = $size ? $size[0] : null;
+                        $file->height = $size ? $size[1] : null;
+
+                        if (!$file->save()) {
+                            foreach ($file->getErrors() as $attribute => $messages) {
+                                foreach ($messages as $message) {
+                                    $form->addError('imageFile', $message);
+                                }
+                            }
+                            throw new \RuntimeException('Failed to save file record.');
+                        }
+
+                        $resource = new Resources();
+                        $resource->file_id = $file->id;
+                        $resource->resource_type = 'product';
+                        $resource->resource_id = $product->id;
+                        $resource->type = 'image';
+                        $resource->title = $file->original_name;
+                        $resource->alt_text = null;
+                        $resource->sort_order = 0;
+                        $resource->is_primary = 1;
+                        if (!$resource->save()) {
+                            foreach ($resource->getErrors() as $attribute => $messages) {
+                                foreach ($messages as $message) {
+                                    $form->addError('imageFile', $message);
+                                }
+                            }
+                            throw new \RuntimeException('Failed to save image resource.');
                         }
                     }
-                    return $this->redirect(['view', 'id' => $product->id]);
-                }
 
-                foreach ($product->getErrors() as $attribute => $messages) {
-                    foreach ($messages as $message) {
-                        $form->addError($attribute, $message);
+                    $transaction->commit();
+                    return $this->redirect(['view', 'id' => $product->id]);
+                } catch (\Throwable $e) {
+                    if ($transaction->isActive) {
+                        $transaction->rollBack();
                     }
+                    Yii::error($e->getMessage(), __METHOD__);
                 }
             }
         }
@@ -155,14 +174,103 @@ class ProductController extends Controller
      */
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
+        $product = $this->findModel($id);
+        $form = new UpdateProductForm();
+        $form->id = $product->id;
+        $form->name = $product->name;
+        $form->slug = $product->slug;
+        $form->description = $product->description;
+        $form->status = $product->status;
+        $form->category_id = $product->category_id;
+        $form->brand_id = $product->brand_id;
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($this->request->isPost && $form->load($this->request->post()) && $form->validate()) {
+            $form->imageFile = UploadedFile::getInstance($form, 'imageFile');
+
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                $product->name = $form->name;
+                $product->slug = $form->slug;
+                $product->description = $form->description;
+                $product->status = $form->status;
+                $product->category_id = $form->category_id;
+                $product->brand_id = $form->brand_id;
+
+                if (!$product->save()) {
+                    foreach ($product->getErrors() as $attribute => $messages) {
+                        foreach ($messages as $message) {
+                            $form->addError($attribute, $message);
+                        }
+                    }
+                    throw new \RuntimeException('Failed to update product.');
+                }
+
+                if ($form->imageFile !== null) {
+                    $uploadDir = Yii::getAlias('@webroot/uploads/products');
+                    FileHelper::createDirectory($uploadDir);
+                    $fileName = Yii::$app->security->generateRandomString(16) . '.' . $form->imageFile->extension;
+                    $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
+
+                    if (!$form->imageFile->saveAs($fullPath)) {
+                        $form->addError('imageFile', 'Failed to upload image.');
+                        throw new \RuntimeException('Failed to upload image.');
+                    }
+
+                    $url = Yii::getAlias('@web/uploads/products/' . $fileName);
+                    $size = @getimagesize($fullPath);
+
+                    $file = new Files();
+                    $file->user_id = 9;
+                    $file->disk = 'local';
+                    $file->path = 'uploads/products/' . $fileName;
+                    $file->url = $url;
+                    $file->original_name = $form->imageFile->name;
+                    $file->mime_type = $form->imageFile->type;
+                    $file->size_bytes = $form->imageFile->size;
+                    $file->width = $size ? $size[0] : null;
+                    $file->height = $size ? $size[1] : null;
+
+                    if (!$file->save()) {
+                        foreach ($file->getErrors() as $attribute => $messages) {
+                            foreach ($messages as $message) {
+                                $form->addError('imageFile', $message);
+                            }
+                        }
+                        throw new \RuntimeException('Failed to save file record.');
+                    }
+
+                    $resource = new Resources();
+                    $resource->file_id = $file->id;
+                    $resource->resource_type = 'product';
+                    $resource->resource_id = $product->id;
+                    $resource->type = 'image';
+                    $resource->title = $file->original_name;
+                    $resource->alt_text = null;
+                    $resource->sort_order = 0;
+                    $resource->is_primary = 1;
+                    if (!$resource->save()) {
+                        foreach ($resource->getErrors() as $attribute => $messages) {
+                            foreach ($messages as $message) {
+                                $form->addError('imageFile', $message);
+                            }
+                        }
+                        throw new \RuntimeException('Failed to save image resource.');
+                    }
+                }
+
+                $transaction->commit();
+                return $this->redirect(['view', 'id' => $product->id]);
+            } catch (\Throwable $e) {
+                if ($transaction->isActive) {
+                    $transaction->rollBack();
+                }
+                Yii::error($e->getMessage(), __METHOD__);
+            }
         }
 
         return $this->render('update', [
-            'model' => $model,
+            'model' => $form,
+            'product' => $product,
         ]);
     }
 

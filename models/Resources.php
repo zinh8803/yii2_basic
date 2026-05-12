@@ -3,6 +3,7 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "resources".
@@ -41,11 +42,18 @@ class Resources extends \yii\db\ActiveRecord
         return [
             [['alt_text'], 'default', 'value' => null],
             [['is_primary'], 'default', 'value' => 0],
-            [['file_id', 'resource_type', 'resource_id', 'type', 'title', 'created_at', 'updated_at'], 'required'],
-            [['file_id', 'resource_id', 'sort_order', 'is_primary', 'created_at', 'updated_at'], 'integer'],
+            [['file_id', 'resource_type', 'resource_id', 'type', 'title'], 'required'],
+            [['file_id', 'resource_id', 'sort_order', 'is_primary'], 'integer'],
             [['resource_type', 'title', 'alt_text'], 'string', 'max' => 255],
             [['type'], 'string', 'max' => 50],
             [['file_id'], 'exist', 'skipOnError' => true, 'targetClass' => Files::class, 'targetAttribute' => ['file_id' => 'id']],
+        ];
+    }
+
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
         ];
     }
 
@@ -66,6 +74,23 @@ class Resources extends \yii\db\ActiveRecord
             'is_primary' => 'Is Primary',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
+        ];
+    }
+
+    public function fields()
+    {
+        return [
+            'id',
+            'resource_type',
+            'resource_id',
+            'type',
+            'title',
+            'alt_text',
+            'sort_order',
+            'is_primary',
+            'file',
+            'created_at',
+            'updated_at',
         ];
     }
 
