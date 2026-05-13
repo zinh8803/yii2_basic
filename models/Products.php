@@ -109,6 +109,11 @@ class Products extends \yii\db\ActiveRecord
         ];
     }
 
+    public static function find()
+    {
+        return new query\ProductQuery(get_called_class());
+    }
+
     /**
      * Gets query for [[Brand]].
      *

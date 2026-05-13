@@ -5,21 +5,23 @@ namespace app\controllers;
 use app\models\Categories;
 use app\models\Products;
 use app\controllers\BaseController;
+use app\models\response\ProductResponse;
+
 class TestController extends BaseController
 {
     public function actionIndex()
     {
-        $products = Products::find()
-            ->joinWith(['category', 'brand'])
-
-            ->asArray(true)
-            ->all();
-        return $this->json(true, $products, 'Products retrieved successfully');
+        $products = ProductResponse::find();
+        //->joinWith(['category', 'brand'])
+        // ->asArray(true)
+        //->all();
+        $result = $this->paginate($products,5);
+        return $this->json(true, $result, 'Products retrieved successfully');
     }
     //find products by category_id
     public function actionByCategory($category_id)
     {
-        $products = Products::find()
+        $products = ProductResponse::find()
             ->joinWith(['category', 'brand'])
             ->with(['productVariants', 'productAttributes', 'productAttributes.attributeValues'])
             ->where([
@@ -36,9 +38,9 @@ class TestController extends BaseController
     //find products by product_id
     public function actionView($id)
     {
-        $product = Products::find()
-            ->joinWith(['category', 'brand'])
+        $product = ProductResponse::find()
             ->with(['productVariants', 'productAttributes', 'productAttributes.attributeValues'])
+            ->joinWith(['category', 'brand'])
             ->where([
                 'products.id' => $id,
             ])
@@ -54,7 +56,7 @@ class TestController extends BaseController
     // Search product name
     public function actionSearch($query)
     {
-        $products = Products::find()
+        $products = ProductResponse::find()
             ->joinWith(['category', 'brand'])
             ->with(['productVariants', 'productAttributes', 'productAttributes.attributeValues'])
             ->where([
@@ -74,7 +76,7 @@ class TestController extends BaseController
     // Get product with variants and attributes
     public function actionVariant()
     {
-        $product = Products::find()
+        $product = ProductResponse::find()
             ->joinWith(['category', 'brand'])
             ->with(['productVariants', 'productAttributes', 'productAttributes.attributeValues'])
             ->limit(5)
@@ -110,4 +112,20 @@ class TestController extends BaseController
             ->all();
         return $this->json(true, $categories, 'Categories retrieved successfully');
     }
+
+    public function actionByBrands($brand_id)
+    {
+        $products = ProductResponse::find()
+            ->active()
+            // ->byBrand($brand_id)
+            //  ->asArray(true)
+            ->all();
+        if (!$products) {
+            return $this->json(false, null, 'Products not found');
+        }
+        return $this->json(true, $products, 'Products retrieved successfully');
+    }
+
+
+
 }

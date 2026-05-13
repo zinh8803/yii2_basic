@@ -1,7 +1,7 @@
 <?php
 namespace app\models\response;
 use app\models\Products;
-use yii\base\Model;
+use app\models\Resources;
 
 class ProductResponse extends Products
 {
@@ -13,16 +13,27 @@ class ProductResponse extends Products
             'category_id',
             'brand_id',
             'slug',
+            'image' => function () {
+                $primaryResource = $this->getResources()->andWhere(['is_primary' => 1])->one();
+                if ($primaryResource && $primaryResource->file) {
+                    return $primaryResource->file->url;
+                }
+                return null;
+            },
             'description',
             'status',
             'created_at',
             'updated_at',
-            'category' => function ($model) {
-                return $model->category ? $model->category->name : null;
-            },
-            'brand' => function ($model) {
-                return $model->brand ? $model->brand->name : null;
-            },
+        ];
+    }
+    public function extraFields()
+    {
+        return [
+            'category',
+            'brand',
+            'productVariants',
+            'productAttributes',
+            'productAttributes.attributeValues',
         ];
     }
 }

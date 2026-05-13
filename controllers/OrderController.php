@@ -333,7 +333,6 @@ class OrderController extends Controller
         $payment->payment_method = $form->payment_method;
         $payment->status = $form->payment_status;
         $payment->payment_status = $form->payment_status;
-        $payment->updated_at = time();
         $payment->save();
     }
 

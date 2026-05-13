@@ -2,7 +2,9 @@
 
 namespace app\models;
 
+use Override;
 use Yii;
+use yii\behaviors\TimestampBehavior;
 
 /**
  * This is the model class for table "reviews".
@@ -39,11 +41,19 @@ class Reviews extends \yii\db\ActiveRecord
         return [
             [['comment'], 'default', 'value' => null],
             [['is_approved'], 'default', 'value' => 0],
-            [['product_id', 'user_id', 'rating', 'created_at', 'updated_at'], 'required'],
-            [['product_id', 'user_id', 'rating', 'is_approved', 'created_at', 'updated_at'], 'integer'],
+            [['product_id', 'user_id', 'rating'], 'required'],
+            [['product_id', 'user_id', 'rating', 'is_approved'], 'integer'],
             [['comment'], 'string'],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
+        ];
+    }
+
+    #[Override]
+    public function behaviors()
+    {
+        return [
+            TimestampBehavior::class,
         ];
     }
 
