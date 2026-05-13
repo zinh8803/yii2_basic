@@ -49,7 +49,14 @@ class UpdateProductForm extends Model
             ],
             [['category_id', 'brand_id', 'status'], 'integer'],
             [['name', 'slug', 'description'], 'string', 'max' => 255],
-            [['imageFile'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, webp', 'maxSize' => 5 * 1024 * 1024],
+            [
+                ['imageFile'],
+                'file',
+                'skipOnEmpty' => true,
+                'extensions' => ['png', 'jpg', 'jpeg', 'webp'],
+                'checkExtensionByMimeType' => false,
+                'maxSize' => 5 * 1024 * 1024,
+            ],
             [['brand_id'], 'exist', 'skipOnError' => true, 'targetClass' => Brands::class, 'targetAttribute' => ['brand_id' => 'id']],
             [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => Categories::class, 'targetAttribute' => ['category_id' => 'id']],
         ];
