@@ -3,16 +3,13 @@
 namespace app\controllers;
 
 use app\models\AttributeValues;
-use yii\data\ActiveDataProvider;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * AttributeValueController implements the CRUD actions for AttributeValues model.
- */
-class AttributeValueController extends Controller
+class AttributeValueController extends BaseController
 {
+    public $modelClass = 'app\\models\\AttributeValues';
+
     /**
      * @inheritDoc
      */
@@ -31,108 +28,57 @@ class AttributeValueController extends Controller
         );
     }
 
-    /**
-     * Lists all AttributeValues models.
-     *
-     * @return string
-     */
+
     public function actionIndex()
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => AttributeValues::find(),
-            /*
-            'pagination' => [
-                'pageSize' => 50
-            ],
-            'sort' => [
-                'defaultOrder' => [
-                    'id' => SORT_DESC,
-                ]
-            ],
-            */
-        ]);
-
-        return $this->render('index', [
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = AttributeValues::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, 'Attribute values retrieved successfully');
     }
 
-    /**
-     * Displays a single AttributeValues model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        return $this->json(true, $model, 'Attribute value retrieved successfully');
     }
 
-    /**
-     * Creates a new AttributeValues model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
+
     public function actionCreate()
     {
         $model = new AttributeValues();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Attribute value created successfully', 201);
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Updates an existing AttributeValues model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Attribute value updated successfully');
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Deletes an existing AttributeValues model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Attribute value deleted successfully');
     }
 
-    /**
-     * Finds the AttributeValues model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return AttributeValues the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+
     protected function findModel($id)
     {
         if (($model = AttributeValues::findOne(['id' => $id])) !== null) {

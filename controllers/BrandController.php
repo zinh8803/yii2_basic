@@ -3,132 +3,105 @@
 namespace app\controllers;
 
 use app\models\Brands;
-use app\models\search\BrandSearch;
-use yii\web\Controller;
+use app\models\forms\Brand\CreateBrandForm;
+use app\models\forms\Brand\UpdateBrandForm;
+use app\models\response\Brand\BrandResponse;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * BrandController implements the CRUD actions for Brands model.
- */
-class BrandController extends Controller
+class BrandController extends BaseController
 {
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
+    public $modelClass = 'app\models\Brands';
+
+    protected function verbs()
     {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
+        return [
+            'index' => ['GET'],
+            'view' => ['GET'],
+            'create' => ['POST'],
+            'update' => ['PUT', 'PATCH'],
+            'delete' => ['DELETE'],
+        ];
+    }
+    public function actions()
+    {
+        $actions = parent::actions();
+
+        unset($actions['index']);
+        unset($actions['view']);
+        unset($actions['create']);
+        unset($actions['update']);
+        unset($actions['delete']);
+
+        return $actions;
     }
 
-    /**
-     * Lists all Brands models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        $searchModel = new BrandSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-
-        return $this->render('index', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = BrandResponse::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, 'Brands retrieved successfully');
     }
 
-    /**
-     * Displays a single Brands model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $query = BrandResponse::find()->where(['id' => $id]);
+        $model = $query->one();
+        if (!$model) {
+            return $this->json(false, null, 'Brand not found', 404);
+        }
+        return $this->json(true, $model, 'Brand retrieved successfully');
     }
 
-    /**
-     * Creates a new Brands model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
-        $model = new Brands();
-
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
+        $form = new CreateBrandForm();
+        $form->load($this->request->bodyParams, '');
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
         }
-
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        $model = new Brands();
+        $model->name = $form->name;
+        $model->slug = $form->slug;
+        $model->status = $form->status;
+        if ($model->save()) {
+            return $this->json(true, $model, 'Brand created successfully', 201);
+        }
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Updates an existing Brands model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
-
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        $model = Brands::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Brand not found', 404);
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        $form = new UpdateBrandForm();
+        $form->id = $id;
+        $form->load($this->request->bodyParams, '');
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
+
+        $model->name = $form->name;
+        $model->slug = $form->slug;
+        $model->status = $form->status;
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Brand updated successfully');
+        }
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Deletes an existing Brands model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
-    }
-
-    /**
-     * Finds the Brands model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Brands the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
-    protected function findModel($id)
-    {
-        if (($model = Brands::findOne(['id' => $id])) !== null) {
-            return $model;
+        $model = Brands::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Brand not found', 404);
         }
-
-        throw new NotFoundHttpException('The requested page does not exist.');
+        $model->delete();
+        return $this->json(true, null, 'Brand deleted successfully');
     }
+
 }

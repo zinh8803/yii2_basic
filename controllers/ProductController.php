@@ -7,147 +7,124 @@ use app\models\forms\Product\UpdateProductForm;
 use app\models\Files;
 use app\models\Products;
 use app\models\Resources;
-use app\models\search\ProductSearch;
 use Yii;
 use yii\base\Model;
 use yii\helpers\FileHelper;
-use yii\web\Controller;
-use yii\web\NotFoundHttpException;
+use app\controllers\BaseController as BaseController;
+use app\models\response\ProductResponse;
 use yii\web\UploadedFile;
 use yii\filters\VerbFilter;
 
-/**
- * ProductController implements the CRUD actions for Products model.
- */
-class ProductController extends Controller
+class ProductController extends BaseController
 {
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
+    public $modelClass = 'app\models\Products';
+
+
+    public function actions()
     {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
+        $actions = parent::actions();
+
+        unset($actions['index']);
+        unset($actions['view']);
+        unset($actions['create']);
+        unset($actions['update']);
+        unset($actions['delete']);
+
+        return $actions;
     }
 
-    /**
-     * Lists all Products models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        $searchModel = new ProductSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-
-        return $this->render('index', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = ProductResponse::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, "Get list product successfully");
     }
 
-    /**
-     * Displays a single Products model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        return $this->json(true, $model, "Get product successfully");
     }
-
-    /**
-     * Creates a new Products model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
         $form = new CreateProductForm();
+        $request = Yii::$app->request;
+        $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
 
-        if ($this->request->isPost && $form->load($this->request->post())) {
-            $form->imageFile = UploadedFile::getInstance($form, 'imageFile');
-
-            if ($form->validate()) {
-                $product = new Products();
-
-                if ($this->saveProduct($product, $form)) {
-                    return $this->redirect(['view', 'id' => $product->id]);
-                }
-            }
+        if ($isMultipart) {
+            $form->load($request->post(), '');
+            $form->imageFile = UploadedFile::getInstanceByName('imageFile');
+        } else {
+            $form->load($request->bodyParams, '');
         }
 
-        return $this->render('create', [
-            'model' => $form,
-        ]);
-    }
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
 
-    /**
-     * Updates an existing Products model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+        $product = new Products();
+        $product->slug = $form->slug;
+
+        if ($this->saveProduct($product, $form)) {
+            $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
+            return $this->json(true, $responseModel, 'Product created successfully', 201);
+        }
+
+        return $this->json(false, $form->errors, 'Failed to create product', 400);
+    }
     public function actionUpdate($id)
     {
         $product = $this->findModel($id);
         $form = $this->buildUpdateForm($product);
+        $request = Yii::$app->request;
+        $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
+        $data = [];
 
-        if ($this->request->isPost && $form->load($this->request->post())) {
-            $form->imageFile = UploadedFile::getInstance($form, 'imageFile');
-
-            if ($form->validate() && $this->saveProduct($product, $form)) {
-                return $this->redirect(['view', 'id' => $product->id]);
+        if ($isMultipart) {
+            $data = $request->post();
+            $form->imageFile = UploadedFile::getInstanceByName('imageFile');
+        } else {
+            $data = $request->bodyParams;
+            if (empty($data)) {
+                $data = $request->put();
             }
         }
 
-        return $this->render('update', [
-            'model' => $form,
-            'product' => $product,
-        ]);
-    }
+        $form->load($data, '');
 
-    /**
-     * Deletes an existing Products model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+        if ($isMultipart && empty($data) && $form->imageFile === null) {
+            return $this->json(
+                false,
+                null,
+                'PUT/PATCH multipart/form-data is not supported by PHP. Use POST with _method=PUT or send JSON body.',
+                400
+            );
+        }
+
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
+
+        if ($this->saveProduct($product, $form)) {
+            $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
+            return $this->json(true, $responseModel, 'Product updated successfully');
+        }
+
+        return $this->json(false, $form->errors, 'Failed to update product', 400);
+    }
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Product deleted successfully');
     }
-
-    /**
-     * Finds the Products model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Products the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = Products::findOne(['id' => $id])) !== null) {
             return $model;
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        throw new \yii\web\NotFoundHttpException('The requested page does not exist.');
     }
 
     private function buildUpdateForm(Products $product): UpdateProductForm
@@ -239,7 +216,7 @@ class ProductController extends Controller
         $size = @getimagesize($fullPath);
 
         $file = new Files();
-        $file->user_id = Yii::$app->user->isGuest ? 9 : Yii::$app->user->id;
+        $file->user_id = 9;
         $file->disk = 'local';
         $file->path = $relativePath;
         $file->url = Yii::getAlias('@web/' . $relativePath);

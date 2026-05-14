@@ -9,16 +9,13 @@ use app\models\Payments;
 use app\models\Products;
 use app\models\ProductVariants;
 use Yii;
-use yii\data\ActiveDataProvider;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * OrderController implements the CRUD actions for Orders model.
- */
-class OrderController extends Controller
+class OrderController extends BaseController
 {
+    public $modelClass = 'app\\models\\Orders';
+
     /**
      * @inheritDoc
      */
@@ -37,202 +34,126 @@ class OrderController extends Controller
         );
     }
 
-    /**
-     * Lists all Orders models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => Orders::find(),
-            /*
-            'pagination' => [
-                'pageSize' => 50
-            ],
-            'sort' => [
-                'defaultOrder' => [
-                    'id' => SORT_DESC,
-                ]
-            ],
-            */
-        ]);
-
-        return $this->render('index', [
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = Orders::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, 'Orders retrieved successfully');
     }
 
-    /**
-     * Displays a single Orders model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModelWithItems($id),
-        ]);
+        $model = $this->findModelWithItems($id);
+        return $this->json(true, $model, 'Order retrieved successfully');
     }
 
-    /**
-     * Creates a new Orders model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
         $form = new CreateOrderForm();
+        $form->load($this->request->bodyParams, '');
 
-        if ($this->request->isPost) {
-            $form->load($this->request->post());
-
-            if (!$form->validate()) {
-                return $this->render('create', [
-                    'model' => $form,
-                ]);
-            }
-
-            $transaction = Yii::$app->db->beginTransaction();
-
-            try {
-                $order = $this->buildOrderFromForm($form);
-                $order->total = 0;
-
-                if ($order->save()) {
-                    $items = $this->buildItemsFromFields($form);
-                    if (empty($items)) {
-                        $form->addError('item_product_id', 'Order item is required.');
-                        $transaction->rollBack();
-                        return $this->render('create', [
-                            'model' => $form,
-                        ]);
-                    }
-
-                    $total = $this->createOrderItems($order, $form, $items);
-                    if ($total === false) {
-                        $transaction->rollBack();
-                        return $this->render('create', [
-                            'model' => $form,
-                        ]);
-                    }
-
-                    $order->total = $total + (float) $order->shipping_fee - (float) $order->discount_amount;
-                    $order->save(false, ['total']);
-
-                    $this->createOrUpdatePayment($order, $form);
-
-                    $transaction->commit();
-                    return $this->redirect(['view', 'id' => $order->id]);
-                }
-
-                $this->addOrderErrorsToForm($order, $form);
-                $transaction->rollBack();
-                return $this->render('create', [
-                    'model' => $form,
-                ]);
-            } catch (\Throwable $exception) {
-                $transaction->rollBack();
-                throw $exception;
-            }
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
         }
 
-        return $this->render('create', [
-            'model' => $form,
-        ]);
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            $order = $this->buildOrderFromForm($form);
+            $order->total = 0;
+
+            if ($order->save()) {
+                $items = $this->buildItemsFromFields($form);
+                if (empty($items)) {
+                    $form->addError('item_product_id', 'Order item is required.');
+                    $transaction->rollBack();
+                    return $this->json(false, $form->errors, 'Validation failed', 422);
+                }
+
+                $total = $this->createOrderItems($order, $form, $items);
+                if ($total === false) {
+                    $transaction->rollBack();
+                    return $this->json(false, $form->errors, 'Validation failed', 422);
+                }
+
+                $order->total = $total + (float) $order->shipping_fee - (float) $order->discount_amount;
+                $order->save(false, ['total']);
+
+                $this->createOrUpdatePayment($order, $form);
+
+                $transaction->commit();
+                $responseModel = $this->findModelWithItems($order->id);
+                return $this->json(true, $responseModel, 'Order created successfully', 201);
+            }
+
+            $this->addOrderErrorsToForm($order, $form);
+            $transaction->rollBack();
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        } catch (\Throwable $exception) {
+            $transaction->rollBack();
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
     }
 
-    /**
-     * Updates an existing Orders model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
         $order = $this->findModel($id);
         $form = $this->buildFormFromOrder($order);
+        $form->load($this->request->bodyParams, '');
 
-        if ($this->request->isPost) {
-            $form->load($this->request->post());
-
-            if (!$form->validate()) {
-                return $this->render('update', [
-                    'model' => $form,
-                ]);
-            }
-
-            $transaction = Yii::$app->db->beginTransaction();
-
-            try {
-                $order = $this->applyFormToOrder($order, $form);
-                $order->total = 0;
-
-                if ($order->save()) {
-                    OrderItems::deleteAll(['order_id' => $order->id]);
-
-                    $items = $this->buildItemsFromFields($form);
-                    if (empty($items)) {
-                        $form->addError('item_product_id', 'Order item is required.');
-                        $transaction->rollBack();
-                        return $this->render('update', [
-                            'model' => $form,
-                        ]);
-                    }
-
-                    $total = $this->createOrderItems($order, $form, $items);
-                    if ($total === false) {
-                        $transaction->rollBack();
-                        return $this->render('update', [
-                            'model' => $form,
-                        ]);
-                    }
-
-                    $order->total = $total + (float) $order->shipping_fee - (float) $order->discount_amount;
-                    $order->save(false, ['total']);
-
-                    $this->createOrUpdatePayment($order, $form);
-
-                    $transaction->commit();
-                    return $this->redirect(['view', 'id' => $order->id]);
-                }
-
-                $this->addOrderErrorsToForm($order, $form);
-                $transaction->rollBack();
-            } catch (\Throwable $exception) {
-                $transaction->rollBack();
-                throw $exception;
-            }
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
         }
 
-        return $this->render('update', [
-            'model' => $form,
-        ]);
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            $order = $this->applyFormToOrder($order, $form);
+            $order->total = 0;
+
+            if ($order->save()) {
+                OrderItems::deleteAll(['order_id' => $order->id]);
+
+                $items = $this->buildItemsFromFields($form);
+                if (empty($items)) {
+                    $form->addError('item_product_id', 'Order item is required.');
+                    $transaction->rollBack();
+                    return $this->json(false, $form->errors, 'Validation failed', 422);
+                }
+
+                $total = $this->createOrderItems($order, $form, $items);
+                if ($total === false) {
+                    $transaction->rollBack();
+                    return $this->json(false, $form->errors, 'Validation failed', 422);
+                }
+
+                $order->total = $total + (float) $order->shipping_fee - (float) $order->discount_amount;
+                $order->save(false, ['total']);
+
+                $this->createOrUpdatePayment($order, $form);
+
+                $transaction->commit();
+                $responseModel = $this->findModelWithItems($order->id);
+                return $this->json(true, $responseModel, 'Order updated successfully');
+            }
+
+            $this->addOrderErrorsToForm($order, $form);
+            $transaction->rollBack();
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        } catch (\Throwable $exception) {
+            $transaction->rollBack();
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
     }
 
-    /**
-     * Deletes an existing Orders model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Order deleted successfully');
     }
 
-    /**
-     * Finds the Orders model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Orders the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = Orders::findOne(['id' => $id])) !== null) {

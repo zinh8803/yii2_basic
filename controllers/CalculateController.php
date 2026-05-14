@@ -4,74 +4,44 @@ namespace app\controllers;
 
 use Exception;
 use Yii;
-use yii\rest\Controller as BaseController;
+
 class CalculateController extends BaseController
 {
+    public $modelClass = 'yii\\base\\Model';
+
     public function actionTotal()
     {
         $body = Yii::$app->request->bodyParams;
-        $a = $body['a'];
-        $b = $body['b'];
+        $a = $body['a'] ?? null;
+        $b = $body['b'] ?? null;
         if (!is_numeric($a) || !is_numeric($b)) {
-            Yii::$app->response->statusCode = 400;
-            return [
-                'status' => false,
-                'data' => null,
-                'message' => 'a and b must be numbers',
-            ];
+            return $this->json(false, null, 'a and b must be numbers', 400);
         }
         $result = (float) $a + (float) $b;
 
-        return [
-            'status' => true,
-            'data' => [
-                'result' => $result,
-            ],
-            "message" => "Success",
-        ];
+        return $this->json(true, ['result' => $result], 'Success');
 
     }
     public function actionDivide()
     {
         try {
             $body = Yii::$app->request->bodyParams;
-            $a = $body['a'];
-            $b = $body['b'];
+            $a = $body['a'] ?? null;
+            $b = $body['b'] ?? null;
 
             if (!is_numeric($a) || !is_numeric($b)) {
-                Yii::$app->response->statusCode = 400;
-                return [
-                    'status' => false,
-                    'data' => null,
-                    'message' => 'a and b must be numbers',
-                ];
+                return $this->json(false, null, 'a and b must be numbers', 400);
             }
 
             if ($b === 0) {
-                Yii::$app->response->statusCode = 400;
-                return [
-                    'status' => false,
-                    'data' => null,
-                    'message' => 'b cannot be zero',
-                ];
+                return $this->json(false, null, 'b cannot be zero', 400);
             }
 
             $result = (float) $a / (float) $b;
 
-            return [
-                'status' => true,
-                'data' => [
-                    'result' => $result,
-                ],
-                "message" => "Success",
-            ];
+            return $this->json(true, ['result' => $result], 'Success');
         } catch (Exception $e) {
-            Yii::$app->response->statusCode = 500;
-            return [
-                'status' => false,
-                'data' => null,
-                'message' => 'Internal Server Error',
-            ];
+            return $this->json(false, null, 'Internal Server Error', 500);
         }
     }
     public function actionAverage()
@@ -80,12 +50,7 @@ class CalculateController extends BaseController
         $numbers = $body['numbers'] ?? [];
 
         if (!is_array($numbers)) {
-            Yii::$app->response->statusCode = 400;
-            return [
-                'status' => false,
-                'data' => null,
-                'message' => 'số liệu phải là một mảng',
-            ];
+            return $this->json(false, null, 'số liệu phải là một mảng', 400);
         }
 
         $flatNumbers = [];
@@ -93,35 +58,19 @@ class CalculateController extends BaseController
         $this->collectNumbers($numbers, $flatNumbers, $error);
 
         if ($error !== null) {
-            Yii::$app->response->statusCode = 400;
-            return [
-                'status' => false,
-                'data' => null,
-                'message' => $error,
-            ];
+            return $this->json(false, null, $error, 400);
         }
 
         $sum = array_sum($flatNumbers);
         $count = count($flatNumbers);
 
         if ($count === 0) {
-            Yii::$app->response->statusCode = 400;
-            return [
-                'status' => false,
-                'data' => null,
-                'message' => 'Mảng số liệu trống.',
-            ];
+            return $this->json(false, null, 'Mảng số liệu trống.', 400);
         }
 
         $average = $sum / $count;
 
-        return [
-            'status' => true,
-            'data' => [
-                'average' => $average,
-            ],
-            "message" => "Success",
-        ];
+        return $this->json(true, ['average' => $average], 'Success');
     }
 
     private function collectNumbers($value, array &$results, ?string &$error): void

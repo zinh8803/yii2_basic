@@ -55,6 +55,17 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
+                [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['product', 'post-product', 'brand', 'category', 'product-attribute'],
+                    //dùng nếu route ko có "s" ở cuối (ví dụ: api/product thay vì api/products)
+                    'pluralize' => false,
+                ],
+                // [
+                //     'class' => 'yii\rest\UrlRule',
+                //     'controller' => ['category'],
+                //     'pluralize' => false,
+                // ],
             ],
         ],
     ],

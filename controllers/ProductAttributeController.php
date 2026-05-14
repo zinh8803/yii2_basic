@@ -2,137 +2,147 @@
 
 namespace app\controllers;
 
+use app\models\AttributeValues;
+use app\models\forms\ProductAttribute\CreateProductAttribute;
+use app\models\forms\ProductAttribute\UpdateProductAttribute;
 use app\models\ProductAttributes;
-use yii\data\ActiveDataProvider;
-use yii\web\Controller;
+use app\models\response\ProductAttribute\ProductAttributeResponse;
+use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * ProductAttributeController implements the CRUD actions for ProductAttributes model.
- */
-class ProductAttributeController extends Controller
+class ProductAttributeController extends BaseController
 {
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
+    public $modelClass = 'app\models\ProductAttributes';
+
+    public function actions()
     {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
+        $actions = parent::actions();
+
+        unset($actions['index']);
+        unset($actions['view']);
+        unset($actions['create']);
+        unset($actions['update']);
+        unset($actions['delete']);
+
+        return $actions;
     }
 
-    /**
-     * Lists all ProductAttributes models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => ProductAttributes::find(),
-            /*
-            'pagination' => [
-                'pageSize' => 50
-            ],
-            'sort' => [
-                'defaultOrder' => [
-                    'id' => SORT_DESC,
-                ]
-            ],
-            */
-        ]);
-
-        return $this->render('index', [
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = ProductAttributeResponse::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, 'Product attributes retrieved successfully');
     }
-
-    /**
-     * Displays a single ProductAttributes model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = ProductAttributeResponse::findOne($id);
+        if (!$model) {
+            throw new NotFoundHttpException('Product attribute not found');
+        }
+        return $this->json(true, $model, 'Product attribute retrieved successfully');
     }
-
-    /**
-     * Creates a new ProductAttributes model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
-        $model = new ProductAttributes();
-
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
+        $form = new CreateProductAttribute();
+        $data = $this->request->bodyParams;
+        if (empty($data)) {
+            $data = $this->request->post();
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
-    }
+        $form->load($data, '');
 
-    /**
-     * Updates an existing ProductAttributes model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $model = new ProductAttributes();
+            $model->product_id = $form->product_id;
+            $model->name = $form->name;
+            $model->type = $form->type;
+            $model->slug = $form->slug;
+            $model->is_variant = $form->is_variant;
+            $model->sort_order = $form->sort_order;
+
+            if (!$model->save()) {
+                $transaction->rollBack();
+                return $this->json(false, $model->errors, 'Validation failed', 422);
+            }
+
+            if (is_array($form->attribute_value)) {
+                $this->saveAttributeValues($model->id, $form->attribute_value);
+            }
+
+            $transaction->commit();
+            return $this->json(true, $model, 'Product attribute created successfully', 201);
+        } catch (\Throwable $e) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
+            Yii::error($e->getMessage(), __METHOD__);
+            return $this->json(false, null, $e->getMessage(), 500);
+        }
+    }
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $form = new UpdateProductAttribute();
+        $form->id = $model->id;
+        $form->product_id = $model->product_id;
+        $form->name = $model->name;
+        $form->type = $model->type;
+        $form->slug = $model->slug;
+        $form->is_variant = $model->is_variant;
+        $form->sort_order = $model->sort_order;
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        $data = $this->request->bodyParams;
+        if (empty($data)) {
+            $data = $this->request->post();
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        $form->load($data, '');
+
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $model->product_id = $form->product_id;
+            $model->name = $form->name;
+            $model->type = $form->type;
+            $model->slug = $form->slug;
+            $model->is_variant = $form->is_variant;
+            $model->sort_order = $form->sort_order;
+
+            if (!$model->save()) {
+                $transaction->rollBack();
+                return $this->json(false, $model->errors, 'Validation failed', 422);
+            }
+
+            if (is_array($form->attribute_value)) {
+                AttributeValues::deleteAll(['attribute_id' => $model->id]);
+                $this->saveAttributeValues($model->id, $form->attribute_value);
+            }
+
+            $transaction->commit();
+            return $this->json(true, $model, 'Product attribute updated successfully');
+        } catch (\Throwable $e) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
+            Yii::error($e->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Failed to save attribute values', 500);
+        }
     }
 
-    /**
-     * Deletes an existing ProductAttributes model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Product attribute deleted successfully');
     }
-
-    /**
-     * Finds the ProductAttributes model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return ProductAttributes the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = ProductAttributes::findOne(['id' => $id])) !== null) {
@@ -140,5 +150,36 @@ class ProductAttributeController extends Controller
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
+    }
+
+    private function saveAttributeValues(int $attributeId, array $values): void
+    {
+        foreach ($values as $index => $item) {
+            $value = null;
+            $colorHex = null;
+            $sortOrder = $index;
+
+            if (is_array($item)) {
+                $value = $item['value'] ?? null;
+                $colorHex = $item['color_hex'] ?? null;
+                $sortOrder = $item['sort_order'] ?? $index;
+            } elseif (is_string($item)) {
+                $value = $item;
+            }
+
+            if ($value === null || $value == '') {
+                throw new \RuntimeException('Attribute value is required.');
+            }
+
+            $attributeValue = new AttributeValues();
+            $attributeValue->attribute_id = $attributeId;
+            $attributeValue->value = $value;
+            $attributeValue->color_hex = $colorHex;
+            $attributeValue->sort_order = (int) $sortOrder;
+
+            if (!$attributeValue->save()) {
+                throw new \RuntimeException('Failed to save attribute value: ' . json_encode($attributeValue->errors));
+            }
+        }
     }
 }

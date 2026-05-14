@@ -12,12 +12,12 @@ use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\base\Security;
 use yii\mail\MailerInterface;
-use yii\web\Controller;
 use yii\web\ErrorAction;
-use yii\web\Response;
 
-class SiteController extends Controller
+class SiteController extends BaseController
 {
+    public $modelClass = 'yii\\base\\Model';
+
     public function __construct(
         $id,
         $module,
@@ -71,60 +71,38 @@ class SiteController extends Controller
         ];
     }
 
-    /**
-     * Displays homepage.
-     *
-     * @return string
-     */
-    public function actionIndex(): string
+    public function actionIndex(): array
     {
-        return $this->render('index');
+        return $this->json(true, null, 'Welcome');
     }
 
-    /**
-     * Login action.
-     *
-     * @return Response|string
-     */
-    public function actionLogin(): Response|string
+
+    public function actionLogin(): array
     {
         if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
+            return $this->json(true, null, 'Already logged in');
         }
 
         $model = new LoginForm($this->security);
+        $model->load($this->request->bodyParams, '');
 
-        if ($model->load($this->request->post()) && $model->login()) {
-            return $this->goBack();
+        if ($model->login()) {
+            return $this->json(true, null, 'Login success');
         }
 
-        $model->password = '';
-
-        return $this->render('login', ['model' => $model]);
+        return $this->json(false, $model->errors, 'Login failed', 422);
     }
 
-    /**
-     * Logout action.
-     *
-     * @return Response
-     */
-    public function actionLogout(): Response
+    public function actionLogout(): array
     {
         Yii::$app->user->logout();
-
-        return $this->goHome();
+        return $this->json(true, null, 'Logout success');
     }
 
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact(): Response|string
+    public function actionContact(): array
     {
         $model = new ContactForm();
-
-        $contact = $model->load($this->request->post()) && $model->contact(
+        $contact = $model->load($this->request->bodyParams, '') && $model->contact(
             $this->mailer,
             Yii::$app->params['adminEmail'],
             Yii::$app->params['senderEmail'],
@@ -132,24 +110,14 @@ class SiteController extends Controller
         );
 
         if ($contact) {
-            Yii::$app->session->setFlash(
-                'success',
-                'Thank you for contacting us. We will respond to you as soon as possible.',
-            );
-
-            return $this->refresh();
+            return $this->json(true, null, 'Contact sent successfully');
         }
 
-        return $this->render('contact', ['model' => $model]);
+        return $this->json(false, $model->errors, 'Contact failed', 422);
     }
 
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout(): string
+    public function actionAbout(): array
     {
-        return $this->render('about');
+        return $this->json(true, null, 'About');
     }
 }

@@ -3,16 +3,13 @@
 namespace app\controllers;
 
 use app\models\Taggables;
-use yii\data\ActiveDataProvider;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * TaggableController implements the CRUD actions for Taggables model.
- */
-class TaggableController extends Controller
+class TaggableController extends BaseController
 {
+    public $modelClass = 'app\\models\\Taggables';
+
     /**
      * @inheritDoc
      */
@@ -31,108 +28,51 @@ class TaggableController extends Controller
         );
     }
 
-    /**
-     * Lists all Taggables models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => Taggables::find(),
-            /*
-            'pagination' => [
-                'pageSize' => 50
-            ],
-            'sort' => [
-                'defaultOrder' => [
-                    'id' => SORT_DESC,
-                ]
-            ],
-            */
-        ]);
-
-        return $this->render('index', [
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = Taggables::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, 'Taggables retrieved successfully');
     }
 
-    /**
-     * Displays a single Taggables model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        return $this->json(true, $model, 'Taggable retrieved successfully');
     }
 
-    /**
-     * Creates a new Taggables model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
         $model = new Taggables();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Taggable created successfully', 201);
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Updates an existing Taggables model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Taggable updated successfully');
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Deletes an existing Taggables model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Taggable deleted successfully');
     }
 
-    /**
-     * Finds the Taggables model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Taggables the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = Taggables::findOne(['id' => $id])) !== null) {

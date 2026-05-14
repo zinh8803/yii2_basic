@@ -2,18 +2,15 @@
 
 namespace app\controllers;
 
-use app\models\User;
 use Yii;
-use yii\data\ActiveDataProvider;
-use yii\web\Controller;
-use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
 
 /**
  * UserController implements the CRUD actions for User model.
  */
-class UserController extends Controller
+class UserController extends BaseController
 {
+    public $modelClass = 'app\\models\\User';
+
 
     public function actionLogin()
     {
@@ -26,25 +23,15 @@ class UserController extends Controller
         $passwordMd5 = md5($password);
 
         if ($username === 'admin' && $passwordMd5 === md5('123456')) {
-
-            return [
-                'status' => true,
-                'data' => [
-                    'id' => 1,
-                    'username' => 'admin',
-                    'name' => 'Ngô Quốc Vinh',
-                    "nows" => '' . date('Y-m-d'),
-                ],
-                "message" => "Success",
-            ];
+            return $this->json(true, [
+                'id' => 1,
+                'username' => 'admin',
+                'name' => 'Ngô Quốc Vinh',
+                'nows' => '' . date('Y-m-d'),
+            ], 'Success');
         }
 
-        Yii::$app->response->statusCode = 401;
-
-        return [
-            'status' => false,
-            'message' => 'Sai tài khoản hoặc mật khẩu'
-        ];
+        return $this->json(false, null, 'Sai tài khoản hoặc mật khẩu', 401);
     }
 
 

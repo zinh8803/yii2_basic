@@ -3,9 +3,9 @@
 namespace app\controllers;
 
 use Yii;
-use yii\rest\Controller;
+use yii\rest\ActiveController;
 
-class BaseController extends Controller
+class BaseController extends ActiveController
 {
     public function json($status = true, $data = [], $message = "", $code = 200): array
     {

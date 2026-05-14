@@ -44,7 +44,7 @@ class ProductAttributes extends \yii\db\ActiveRecord
             [['type'], 'default', 'value' => 'text'],
             [['sort_order'], 'default', 'value' => 0],
             [['product_id', 'name'], 'required'],
-            [['product_id', 'is_variant', 'sort_order', 'created_at', 'updated_at'], 'integer'],
+            [['product_id', 'is_variant', 'sort_order'], 'integer'],
             [['name', 'slug'], 'string', 'max' => 255],
             [['type'], 'string', 'max' => 50],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],

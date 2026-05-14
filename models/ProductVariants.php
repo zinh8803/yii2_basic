@@ -15,6 +15,7 @@ use yii\behaviors\TimestampBehavior;
  * @property float $price
  * @property float|null $sale_price
  * @property float|null $cost_price
+ * @property int $stock
  * @property float|null $weight
  * @property string $status
  * @property int $created_at
@@ -45,7 +46,7 @@ class ProductVariants extends \yii\db\ActiveRecord
             [['sku', 'sale_price', 'cost_price', 'weight'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 'active'],
             [['product_id', 'name', 'price'], 'required'],
-            [['product_id'], 'integer'],
+            [['product_id', 'stock'], 'integer'],
             [['price', 'sale_price', 'cost_price', 'weight'], 'number'],
             [['name'], 'string', 'max' => 255],
             [['sku'], 'string', 'max' => 100],
@@ -75,6 +76,7 @@ class ProductVariants extends \yii\db\ActiveRecord
             'price' => 'Price',
             'sale_price' => 'Sale Price',
             'cost_price' => 'Cost Price',
+            'stock' => 'Stock',
             'weight' => 'Weight',
             'status' => 'Status',
             'created_at' => 'Created At',

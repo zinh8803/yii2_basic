@@ -7,16 +7,14 @@ use app\models\Carts;
 use app\models\ProductVariants;
 use app\models\forms\Cart\AddToCartForm;
 use Yii;
-use yii\data\ActiveDataProvider;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * CartController implements the CRUD actions for carts model.
- */
-class CartController extends Controller
+
+class CartController extends BaseController
 {
+    public $modelClass = 'app\\models\\Carts';
+
     /**
      * @inheritDoc
      */
@@ -38,105 +36,44 @@ class CartController extends Controller
         );
     }
 
-    /**
-     * Lists all carts models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => Carts::find(),
-            /*
-            'pagination' => [
-                'pageSize' => 50
-            ],
-            'sort' => [
-                'defaultOrder' => [
-                    'id' => SORT_DESC,
-                ]
-            ],
-            */
-        ]);
-
-        return $this->render('index', [
-            'dataProvider' => $dataProvider,
-        ]);
+        $query = Carts::find();
+        $data = $this->paginate($query);
+        return $this->json(true, $data, 'Carts retrieved successfully');
     }
 
-    /**
-     * Displays a single carts model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        return $this->json(true, $model, 'Cart retrieved successfully');
     }
 
-    /**
-     * Creates a new carts model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
         $model = new AddToCartForm();
+        $model->load($this->request->bodyParams, '');
 
-        if ($this->request->isPost) {
-            $model->load($this->request->post());
-
-            if ($model->validate()) {
-                $cart = $this->addItemFromForm($model);
-
-                return $this->redirect(['view', 'id' => $cart->id]);
-            }
+        if ($model->validate()) {
+            $cart = $this->addItemFromForm($model);
+            return $this->json(true, $cart, 'Cart created successfully', 201);
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-    /**
-     * Updates an existing carts model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
-        Yii::$app->session->setFlash('info', 'Use cart item actions to update quantities.');
-
-        return $this->redirect(['view', 'id' => $model->id]);
+        return $this->json(true, $model, 'Use cart item actions to update quantities.');
     }
 
-    /**
-     * Deletes an existing carts model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Cart deleted successfully');
     }
 
-    /**
-     * Finds the carts model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return carts the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = Carts::findOne(['id' => $id])) !== null) {
@@ -149,20 +86,23 @@ class CartController extends Controller
     public function actionAddItem()
     {
         $form = new AddToCartForm();
-        $form->load($this->request->post());
+        $form->load($this->request->bodyParams, '');
 
         if (!$form->validate()) {
-            return $this->redirect(['index']);
+            return $this->json(false, $form->errors, 'Validation failed', 422);
         }
 
         $cart = $this->addItemFromForm($form);
-
-        return $this->redirect(['view', 'id' => $cart->id]);
+        return $this->json(true, $cart, 'Cart item added successfully');
     }
 
     public function actionUpdateItem($id)
     {
-        $userId = (int) $this->request->post('user_id');
+        $body = $this->request->bodyParams;
+        $userId = (int) ($body['user_id'] ?? 0);
+        if ($userId < 1) {
+            return $this->json(false, null, 'user_id is required', 400);
+        }
         $cart = $this->getOrCreateCartByUserId($userId);
 
         $item = CartItems::findOne([
@@ -174,7 +114,7 @@ class CartController extends Controller
             throw new NotFoundHttpException('Cart item not found.');
         }
 
-        $quantity = (int) $this->request->post('quantity');
+        $quantity = (int) ($body['quantity'] ?? 0);
         if ($quantity < 1) {
             $item->delete();
         } else {
@@ -183,13 +123,16 @@ class CartController extends Controller
         }
 
         $this->recalculateTotal($cart);
-
-        return $this->redirect(['view', 'id' => $cart->id]);
+        return $this->json(true, $cart, 'Cart item updated successfully');
     }
 
     public function actionRemoveItem($id)
     {
-        $userId = (int) $this->request->post('user_id');
+        $body = $this->request->bodyParams;
+        $userId = (int) ($body['user_id'] ?? 0);
+        if ($userId < 1) {
+            return $this->json(false, null, 'user_id is required', 400);
+        }
         $cart = $this->getOrCreateCartByUserId($userId);
 
         $item = CartItems::findOne([
@@ -203,8 +146,7 @@ class CartController extends Controller
 
         $item->delete();
         $this->recalculateTotal($cart);
-
-        return $this->redirect(['view', 'id' => $cart->id]);
+        return $this->json(true, $cart, 'Cart item removed successfully');
     }
 
     private function getOrCreateCartByUserId(int $userId)

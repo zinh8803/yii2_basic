@@ -4,15 +4,13 @@ namespace app\controllers;
 
 use app\models\Tags;
 use app\models\search\TagSearch;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * TagController implements the CRUD actions for Tags model.
- */
-class TagController extends Controller
+class TagController extends BaseController
 {
+    public $modelClass = 'app\\models\\Tags';
+
     /**
      * @inheritDoc
      */
@@ -30,99 +28,47 @@ class TagController extends Controller
             ]
         );
     }
-
-    /**
-     * Lists all Tags models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
         $searchModel = new TagSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-
-        return $this->render('index', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-        ]);
+        $data = $this->paginate($dataProvider->query);
+        return $this->json(true, $data, 'Tags retrieved successfully');
     }
-
-    /**
-     * Displays a single Tags model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        return $this->json(true, $model, 'Tag retrieved successfully');
     }
-
-    /**
-     * Creates a new Tags model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
         $model = new Tags();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Tag created successfully', 201);
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
-
-    /**
-     * Updates an existing Tags model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Tag updated successfully');
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
-
-    /**
-     * Deletes an existing Tags model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Tag deleted successfully');
     }
-
-    /**
-     * Finds the Tags model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Tags the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = Tags::findOne(['id' => $id])) !== null) {

@@ -12,7 +12,7 @@ use yii\behaviors\TimestampBehavior;
  * @property int $id
  * @property string $name
  * @property string $slug
- * @property string $status
+ * @property int $status
  * @property int|null $created_at
  * @property int|null $updated_at
  *
@@ -36,10 +36,13 @@ class Brands extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['status'], 'default', 'value' => 'active'],
+            [['status'], 'default', 'value' => 1],
+            [['status'], 'in', 'range' => [0, 1]],
+            [['name'], 'unique'],
+            [['slug'], 'unique'],
             [['name', 'slug'], 'required'],
             [['name', 'slug'], 'string', 'max' => 255],
-            [['status'], 'string', 'max' => 50],
+            [['status'], 'integer'],
         ];
     }
 

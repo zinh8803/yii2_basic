@@ -40,8 +40,8 @@ class AttributeValues extends \yii\db\ActiveRecord
         return [
             [['color_hex'], 'default', 'value' => null],
             [['sort_order'], 'default', 'value' => 0],
-            [['attribute_id', 'value', 'slug', 'created_at', 'updated_at'], 'required'],
-            [['attribute_id', 'sort_order', 'created_at', 'updated_at'], 'integer'],
+            [['attribute_id', 'value', 'slug'], 'required'],
+            [['attribute_id', 'sort_order'], 'integer'],
             [['value', 'slug'], 'string', 'max' => 255],
             [['color_hex'], 'string', 'max' => 10],
             [['attribute_id'], 'exist', 'skipOnError' => true, 'targetClass' => ProductAttributes::class, 'targetAttribute' => ['attribute_id' => 'id']],

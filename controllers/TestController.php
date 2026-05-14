@@ -9,13 +9,15 @@ use app\models\response\ProductResponse;
 
 class TestController extends BaseController
 {
+    public $modelClass = 'app\\models\\response\\ProductResponse';
+
     public function actionIndex()
     {
         $products = ProductResponse::find();
         //->joinWith(['category', 'brand'])
         // ->asArray(true)
         //->all();
-        $result = $this->paginate($products,5);
+        $result = $this->paginate($products, 5);
         return $this->json(true, $result, 'Products retrieved successfully');
     }
     //find products by category_id

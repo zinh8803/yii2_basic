@@ -4,15 +4,13 @@ namespace app\controllers;
 
 use app\models\ProductVariants;
 use app\models\search\ProductVariantSearch;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
-/**
- * ProductVariantController implements the CRUD actions for ProductVariants model.
- */
-class ProductVariantController extends Controller
+class ProductVariantController extends BaseController
 {
+    public $modelClass = 'app\\models\\ProductVariants';
+
     /**
      * @inheritDoc
      */
@@ -31,98 +29,48 @@ class ProductVariantController extends Controller
         );
     }
 
-    /**
-     * Lists all ProductVariants models.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
         $searchModel = new ProductVariantSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-
-        return $this->render('index', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-        ]);
+        $data = $this->paginate($dataProvider->query);
+        return $this->json(true, $data, 'Product variants retrieved successfully');
     }
 
-    /**
-     * Displays a single ProductVariants model.
-     * @param int $id ID
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionView($id)
     {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
+        $model = $this->findModel($id);
+        return $this->json(true, $model, 'Product variant retrieved successfully');
     }
-
-    /**
-     * Creates a new ProductVariants model.
-     * If creation is successful, the browser will be redirected to the 'view' page.
-     * @return string|\yii\web\Response
-     */
     public function actionCreate()
     {
         $model = new ProductVariants();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
-        } else {
-            $model->loadDefaultValues();
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Product variant created successfully', 201);
         }
 
-        return $this->render('create', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
-
-    /**
-     * Updates an existing ProductVariants model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|\yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
 
-        if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        $model->load($this->request->bodyParams, '');
+
+        if ($model->save()) {
+            return $this->json(true, $model, 'Product variant updated successfully');
         }
 
-        return $this->render('update', [
-            'model' => $model,
-        ]);
+        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
-
-    /**
-     * Deletes an existing ProductVariants model.
-     * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
-     * @return \yii\web\Response
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     public function actionDelete($id)
     {
         $this->findModel($id)->delete();
-
-        return $this->redirect(['index']);
+        return $this->json(true, null, 'Product variant deleted successfully');
     }
-
-    /**
-     * Finds the ProductVariants model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return ProductVariants the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
     protected function findModel($id)
     {
         if (($model = ProductVariants::findOne(['id' => $id])) !== null) {
