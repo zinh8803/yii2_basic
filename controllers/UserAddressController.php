@@ -6,6 +6,7 @@ use app\models\forms\UserAddress\CreateUserAddressForm;
 use app\models\forms\UserAddress\UpdateUserAddressForm;
 use app\models\UserAddresses;
 use app\models\search\UserAddressSearch;
+use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
@@ -56,8 +57,13 @@ class UserAddressController extends BaseController
             $model->detail_address = $form->detail_address;
             $model->phone_number = $form->phone_number;
             $model->name_address = $form->name_address;
-            if ($model->save()) {
-                return $this->json(true, $model, 'User address created successfully', 201);
+            try {
+                if ($model->save()) {
+                    return $this->json(true, $model, 'User address created successfully', 201);
+                }
+            } catch (\Throwable $exception) {
+                Yii::error($exception->getMessage(), __METHOD__);
+                return $this->json(false, null, 'Internal server error', 500);
             }
         }
 
@@ -68,14 +74,11 @@ class UserAddressController extends BaseController
     {
         $model = $this->findModel($id);
         $form = new UpdateUserAddressForm();
-        $form->user_id = $model->user_id;
-        $form->city = $model->city;
-        $form->ward = $model->ward;
-        $form->detail_address = $model->detail_address;
-        $form->phone_number = $model->phone_number;
-        $form->name_address = $model->name_address;
-
-        $form->load($this->request->bodyParams, '');
+        $data = $this->request->bodyParams;
+        if (empty($data)) {
+            $data = $this->request->post();
+        }
+        $form->load($data, '');
         if ($form->validate()) {
             $model->user_id = $form->user_id;
             $model->city = $form->city;
@@ -83,8 +86,13 @@ class UserAddressController extends BaseController
             $model->detail_address = $form->detail_address;
             $model->phone_number = $form->phone_number;
             $model->name_address = $form->name_address;
-            if ($model->save()) {
-                return $this->json(true, $model, 'User address updated successfully');
+            try {
+                if ($model->save()) {
+                    return $this->json(true, $model, 'User address updated successfully');
+                }
+            } catch (\Throwable $exception) {
+                Yii::error($exception->getMessage(), __METHOD__);
+                return $this->json(false, null, 'Internal server error', 500);
             }
         }
 
@@ -93,8 +101,17 @@ class UserAddressController extends BaseController
 
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'User address deleted successfully');
+        try {
+            $model = $this->findModel($id);
+            if ($model->delete()) {
+                return $this->json(true, null, 'User address deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, null, 'Failed to delete user address', 500);
     }
 
     protected function findModel($id)

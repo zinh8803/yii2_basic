@@ -7,6 +7,7 @@ use app\models\forms\ProductAttribute\CreateProductAttribute;
 use app\models\forms\ProductAttribute\UpdateProductAttribute;
 use app\models\ProductAttributes;
 use app\models\response\ProductAttribute\ProductAttributeResponse;
+use Transliterator;
 use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -87,21 +88,16 @@ class ProductAttributeController extends BaseController
     }
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
+        $model = ProductAttributes::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Product attribute not found', 404);
+        }
         $form = new UpdateProductAttribute();
         $form->id = $model->id;
-        $form->product_id = $model->product_id;
-        $form->name = $model->name;
-        $form->type = $model->type;
-        $form->slug = $model->slug;
-        $form->is_variant = $model->is_variant;
-        $form->sort_order = $model->sort_order;
-
         $data = $this->request->bodyParams;
         if (empty($data)) {
             $data = $this->request->post();
         }
-
         $form->load($data, '');
 
         if (!$form->validate()) {
@@ -134,23 +130,31 @@ class ProductAttributeController extends BaseController
                 $transaction->rollBack();
             }
             Yii::error($e->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Failed to save attribute values', 500);
+            return $this->json(false, null, $e->getMessage(), 500);
         }
     }
 
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'Product attribute deleted successfully');
-    }
-    protected function findModel($id)
-    {
-        if (($model = ProductAttributes::findOne(['id' => $id])) !== null) {
-            return $model;
+        $model = ProductAttributes::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Product attribute not found', 404);
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            AttributeValues::deleteAll(['attribute_id' => $model->id]);
+
+            $model->delete();
+            $transaction->commit();
+            return $this->json(true, null, 'Product attribute deleted successfully');
+        } catch (\Throwable $e) {
+            $transaction->rollBack();
+            Yii::error($e->getMessage(), __METHOD__);
+            return $this->json(false, null, $e->getMessage(), 500);
+        }
     }
+
 
     private function saveAttributeValues(int $attributeId, array $values): void
     {

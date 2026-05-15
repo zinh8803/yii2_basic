@@ -3,6 +3,7 @@
 namespace app\controllers;
 
 use app\models\Reviews;
+use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
@@ -46,9 +47,13 @@ class ReviewController extends BaseController
         $model = new Reviews();
 
         $model->load($this->request->bodyParams, '');
-
-        if ($model->save()) {
-            return $this->json(true, $model, 'Review created successfully', 201);
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Review created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
@@ -59,17 +64,30 @@ class ReviewController extends BaseController
         $model = $this->findModel($id);
 
         $model->load($this->request->bodyParams, '');
-
-        if ($model->save()) {
-            return $this->json(true, $model, 'Review updated successfully');
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Review updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
     }
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'Review deleted successfully');
+        try {
+            $model = $this->findModel($id);
+            if ($model->delete()) {
+                return $this->json(true, null, 'Review deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, null, 'Failed to delete review', 500);
     }
 
     protected function findModel($id)

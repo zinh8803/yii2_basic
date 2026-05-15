@@ -6,7 +6,7 @@ use app\models\Categories;
 use app\models\forms\Category\CreateCategoryForm;
 use app\models\forms\Category\UpdateCategoryForm;
 use app\models\response\Category\CategoryResponse;
-
+use Yii;
 
 class CategoryController extends BaseController
 {
@@ -63,8 +63,13 @@ class CategoryController extends BaseController
         $model->status = $form->status;
         $model->parent_id = $form->parent_id;
 
-        if ($model->save()) {
-            return $this->json(true, $model, 'Category created successfully', 201);
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Category created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
@@ -80,9 +85,6 @@ class CategoryController extends BaseController
 
         $form = new UpdateCategoryForm();
         $form->id = $id;
-        $form->name = $model->name;
-        $form->status = $model->status;
-        $form->parent_id = $model->parent_id;
 
         $data = $this->request->bodyParams;
         if (empty($data)) {
@@ -99,8 +101,13 @@ class CategoryController extends BaseController
         $model->status = $form->status;
         $model->parent_id = $form->parent_id;
 
-        if ($model->save()) {
-            return $this->json(true, $model, 'Category updated successfully');
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Category updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
@@ -112,8 +119,16 @@ class CategoryController extends BaseController
         if (!$model) {
             return $this->json(false, null, 'Category not found', 404);
         }
-        $model->delete();
-        return $this->json(true, null, 'Category deleted successfully');
+        try {
+            if ($model->delete()) {
+                return $this->json(true, null, 'Category deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, null, 'Failed to delete category', 500);
     }
 
 }

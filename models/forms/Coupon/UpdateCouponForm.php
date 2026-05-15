@@ -5,8 +5,9 @@ namespace app\models\forms\Coupon;
 use app\models\Coupons;
 use yii\base\Model;
 
-class CreateCouponForm extends Model
+class UpdateCouponForm extends Model
 {
+    public $id;
     public $code;
     public $type;
     public $value;
@@ -21,11 +22,9 @@ class CreateCouponForm extends Model
     public function rules()
     {
         return [
-            [['used_count'], 'default', 'value' => 0],
-            [['is_active'], 'default', 'value' => 1],
-            [['code', 'type', 'value', 'min_order_value', 'max_discount', 'max_usage', 'starts_at', 'expires_at'], 'required'],
+            [['id', 'code', 'type', 'value', 'min_order_value', 'max_discount', 'max_usage', 'starts_at', 'expires_at'], 'required'],
+            [['id', 'max_usage', 'used_count', 'is_active'], 'integer'],
             [['value', 'min_order_value', 'max_discount'], 'number'],
-            [['max_usage', 'used_count', 'is_active'], 'integer'],
             [['code'], 'string', 'max' => 50],
             [['type'], 'string', 'max' => 20],
             [['starts_at', 'expires_at'], 'datetime', 'format' => 'php:Y-m-d H:i:s'],

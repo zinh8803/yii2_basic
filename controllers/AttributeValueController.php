@@ -3,31 +3,13 @@
 namespace app\controllers;
 
 use app\models\AttributeValues;
+use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
 class AttributeValueController extends BaseController
 {
     public $modelClass = 'app\\models\\AttributeValues';
-
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
-    {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
-    }
-
 
     public function actionIndex()
     {
@@ -49,9 +31,13 @@ class AttributeValueController extends BaseController
         $model = new AttributeValues();
 
         $model->load($this->request->bodyParams, '');
-
-        if ($model->save()) {
-            return $this->json(true, $model, 'Attribute value created successfully', 201);
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Attribute value created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
@@ -63,9 +49,13 @@ class AttributeValueController extends BaseController
         $model = $this->findModel($id);
 
         $model->load($this->request->bodyParams, '');
-
-        if ($model->save()) {
-            return $this->json(true, $model, 'Attribute value updated successfully');
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Attribute value updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
@@ -74,8 +64,17 @@ class AttributeValueController extends BaseController
 
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'Attribute value deleted successfully');
+        try {
+            $model = $this->findModel($id);
+            if ($model->delete()) {
+                return $this->json(true, null, 'Attribute value deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, null, 'Failed to delete attribute value', 500);
     }
 
 

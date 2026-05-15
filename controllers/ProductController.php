@@ -43,8 +43,11 @@ class ProductController extends BaseController
 
     public function actionView($id)
     {
-        $model = $this->findModel($id);
-        return $this->json(true, $model, "Get product successfully");
+        $model = ProductResponse::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Product not found', 404);
+        }
+        return $this->json(true, $model, 'Product retrieved successfully');
     }
     public function actionCreate()
     {
@@ -66,9 +69,14 @@ class ProductController extends BaseController
         $product = new Products();
         $product->slug = $form->slug;
 
-        if ($this->saveProduct($product, $form)) {
-            $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
-            return $this->json(true, $responseModel, 'Product created successfully', 201);
+        try {
+            if ($this->saveProduct($product, $form)) {
+                $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
+                return $this->json(true, $responseModel, 'Product created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $form->errors, 'Failed to create product', 400);
@@ -106,17 +114,31 @@ class ProductController extends BaseController
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
 
-        if ($this->saveProduct($product, $form)) {
-            $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
-            return $this->json(true, $responseModel, 'Product updated successfully');
+        try {
+            if ($this->saveProduct($product, $form)) {
+                $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
+                return $this->json(true, $responseModel, 'Product updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
         return $this->json(false, $form->errors, 'Failed to update product', 400);
     }
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'Product deleted successfully');
+        try {
+            $model = $this->findModel($id);
+            if ($model->delete()) {
+                return $this->json(true, null, 'Product deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, null, 'Failed to delete product', 500);
     }
     protected function findModel($id)
     {
@@ -131,12 +153,6 @@ class ProductController extends BaseController
     {
         $form = new UpdateProductForm();
         $form->id = $product->id;
-        $form->name = $product->name;
-        $form->slug = $product->slug;
-        $form->description = $product->description;
-        $form->status = $product->status;
-        $form->category_id = $product->category_id;
-        $form->brand_id = $product->brand_id;
 
         return $form;
     }
@@ -155,10 +171,10 @@ class ProductController extends BaseController
 
             if ($form->imageFile instanceof UploadedFile) {
                 if ($form instanceof UpdateProductForm) {
-                    $this->deleteProductImageRecords($product);
+                    $this->markProductImagesNonPrimary($product);
                 }
 
-                $this->attachImage($product, $form->imageFile, $form);
+                $this->attachImage($product, $form->imageFile, $form, true);
             }
 
             $transaction->commit();
@@ -185,7 +201,7 @@ class ProductController extends BaseController
         }
     }
 
-    private function attachImage(Products $product, UploadedFile $imageFile, CreateProductForm|UpdateProductForm $form): void
+    private function attachImage(Products $product, UploadedFile $imageFile, CreateProductForm|UpdateProductForm $form, bool $isPrimary = true): void
     {
         $uploadDir = Yii::getAlias('@webroot/uploads/products');
         FileHelper::createDirectory($uploadDir);
@@ -201,7 +217,7 @@ class ProductController extends BaseController
 
         try {
             $file = $this->createFileRecord($imageFile, $relativePath, $fullPath);
-            $this->createImageResource($product, $file);
+            $this->createImageResource($product, $file, $isPrimary);
         } catch (\Throwable $e) {
             @unlink($fullPath);
             if (!$form->hasErrors('imageFile')) {
@@ -233,7 +249,7 @@ class ProductController extends BaseController
         return $file;
     }
 
-    private function createImageResource(Products $product, Files $file): void
+    private function createImageResource(Products $product, Files $file, bool $isPrimary): void
     {
         $resource = new Resources();
         $resource->file_id = $file->id;
@@ -243,14 +259,14 @@ class ProductController extends BaseController
         $resource->title = $file->original_name;
         $resource->alt_text = null;
         $resource->sort_order = 0;
-        $resource->is_primary = 1;
+        $resource->is_primary = $isPrimary ? 1 : 0;
 
         if (!$resource->save()) {
             throw new \RuntimeException('Failed to save image resource: ' . json_encode($resource->errors));
         }
     }
 
-    private function deleteProductImageRecords(Products $product): void
+    private function markProductImagesNonPrimary(Products $product): void
     {
         $resources = Resources::find()
             ->where([
@@ -261,12 +277,12 @@ class ProductController extends BaseController
             ->all();
 
         foreach ($resources as $resource) {
-            $fileId = $resource->file_id;
-            $resource->delete();
-
-            if (!Resources::find()->where(['file_id' => $fileId])->exists()) {
-                Files::deleteAll(['id' => $fileId]);
+            if ((int) $resource->is_primary === 0) {
+                continue;
             }
+
+            $resource->is_primary = 0;
+            $resource->save(false, ['is_primary']);
         }
     }
 

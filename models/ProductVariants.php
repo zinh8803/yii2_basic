@@ -4,6 +4,7 @@ namespace app\models;
 
 use Yii;
 use yii\behaviors\TimestampBehavior;
+use yii\helpers\Inflector;
 
 /**
  * This is the model class for table "product_variants".
@@ -17,7 +18,7 @@ use yii\behaviors\TimestampBehavior;
  * @property float|null $cost_price
  * @property int $stock
  * @property float|null $weight
- * @property string $status
+ * @property boolean $is_active
  * @property int $created_at
  * @property int $updated_at
  *
@@ -44,13 +45,13 @@ class ProductVariants extends \yii\db\ActiveRecord
     {
         return [
             [['sku', 'sale_price', 'cost_price', 'weight'], 'default', 'value' => null],
-            [['status'], 'default', 'value' => 'active'],
+            [['is_active'], 'default', 'value' => 1],
             [['product_id', 'name', 'price'], 'required'],
             [['product_id', 'stock'], 'integer'],
             [['price', 'sale_price', 'cost_price', 'weight'], 'number'],
             [['name'], 'string', 'max' => 255],
             [['sku'], 'string', 'max' => 100],
-            [['status'], 'string', 'max' => 50],
+            [['is_active'], 'boolean'],
             [['sku'], 'unique'],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
         ];
@@ -60,6 +61,24 @@ class ProductVariants extends \yii\db\ActiveRecord
     {
         return [
             TimestampBehavior::class,
+            'sku' => [
+                'class' => 'yii\behaviors\AttributeBehavior',
+                'attributes' => [
+                    self::EVENT_BEFORE_INSERT => 'sku',
+                    self::EVENT_BEFORE_UPDATE => 'sku',
+                ],
+                'value' => function () {
+                    if ($this->isNewRecord) {
+                        return $this->sku ?: $this->generateUniqueSku();
+                    }
+
+                    if ($this->isAttributeChanged('sku') && !empty($this->sku)) {
+                        return $this->sku;
+                    }
+
+                    return $this->generateUniqueSku();
+                },
+            ],
         ];
     }
 
@@ -78,7 +97,7 @@ class ProductVariants extends \yii\db\ActiveRecord
             'cost_price' => 'Cost Price',
             'stock' => 'Stock',
             'weight' => 'Weight',
-            'status' => 'Status',
+            'is_active' => 'Is Active',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];
@@ -113,5 +132,30 @@ class ProductVariants extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Products::class, ['id' => 'product_id']);
     }
+
+    private function generateUniqueSku(): string
+    {
+        $productName = $this->product ? $this->product->name : null;
+        if ($productName === null && $this->product_id) {
+            $product = Products::findOne($this->product_id);
+            $productName = $product ? $product->name : null;
+        }
+
+        $base = trim(($productName ?: '') . ' ' . ($this->name ?: ''));
+        $skuBase = strtoupper(Inflector::slug($base, '-'));
+        if ($skuBase === '') {
+            $skuBase = 'SKU';
+        }
+
+        $sku = $skuBase;
+        $suffix = 1;
+        while (static::find()->where(['sku' => $sku])->exists()) {
+            $sku = $skuBase . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $sku;
+    }
+
 
 }

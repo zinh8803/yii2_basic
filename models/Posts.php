@@ -103,6 +103,16 @@ class Posts extends \yii\db\ActiveRecord
     }
 
     /**
+     * Gets resources (images) for this post.
+     * @return \yii\db\ActiveQuery
+     */
+    public function getResources()
+    {
+        return $this->hasMany(Resources::class, ['resource_id' => 'id'])
+            ->andWhere(['resource_type' => 'post']);
+    }
+
+    /**
      * Gets query for [[Taggables]].
      *
      * @return \yii\db\ActiveQuery

@@ -2,81 +2,126 @@
 
 namespace app\controllers;
 
+use app\models\forms\ProductVariant\UpdateProductVariantForm;
 use app\models\ProductVariants;
-use app\models\search\ProductVariantSearch;
-use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
+use app\models\forms\ProductVariant\CreateProductVariantForm;
+use app\models\response\ProductVariant\ProductVariantResponse;
+use Yii;
 
 class ProductVariantController extends BaseController
 {
-    public $modelClass = 'app\\models\\ProductVariants';
+    public $modelClass = 'app\models\ProductVariants';
 
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
+    public function actions()
     {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
+        $actions = parent::actions();
+
+        unset($actions['index']);
+        unset($actions['view']);
+        unset($actions['create']);
+        unset($actions['update']);
+        unset($actions['delete']);
+
+        return $actions;
     }
 
     public function actionIndex()
     {
-        $searchModel = new ProductVariantSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
+        $query = ProductVariantResponse::find();
+        $data = $this->paginate($query);
         return $this->json(true, $data, 'Product variants retrieved successfully');
     }
 
     public function actionView($id)
     {
-        $model = $this->findModel($id);
-        return $this->json(true, $model, 'Product variant retrieved successfully');
+        $query = ProductVariantResponse::findOne($id);
+        if (!$query) {
+            return $this->json(false, null, 'Product variant not found', 404);
+        }
+        return $this->json(true, $query, 'Product variant retrieved successfully');
     }
     public function actionCreate()
     {
-        $model = new ProductVariants();
+        $form = new CreateProductVariantForm();
 
-        $model->load($this->request->bodyParams, '');
+        $form->load($this->request->bodyParams, '');
 
-        if ($model->save()) {
-            return $this->json(true, $model, 'Product variant created successfully', 201);
+        if ($form->validate()) {
+            return $this->json(true, $form, 'Product variant created successfully', 201);
         }
-
-        return $this->json(false, $model->errors, 'Validation failed', 422);
+        $model = new ProductVariants();
+        $model->name = $form->name;
+        $model->product_id = $form->product_id;
+        $model->sku = $form->sku;
+        $model->price = $form->price;
+        $model->sale_price = $form->sale_price;
+        $model->cost_price = $form->cost_price;
+        $model->stock = $form->stock;
+        $model->weight = $form->weight;
+        $model->is_active = $form->is_active;
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Product variant created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+        return $this->json(false, $form->errors, 'Validation failed', 422);
     }
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
+        $model = ProductVariants::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Product variant not found', 404);
+        }
+        $form = new UpdateProductVariantForm();
+        $form->id = $id;
+        $data = $this->request->bodyParams;
+        if (empty($data)) {
+            $data = $this->request->post();
+        }
+        $form->load($data, '');
 
-        $model->load($this->request->bodyParams, '');
+        if ($form->validate()) {
+            $model->name = $form->name;
+            $model->product_id = $form->product_id;
+            $model->price = $form->price;
+            $model->sale_price = $form->sale_price;
+            $model->cost_price = $form->cost_price;
+            $model->stock = $form->stock;
+            $model->weight = $form->weight;
+            $model->is_active = $form->is_active;
 
-        if ($model->save()) {
-            return $this->json(true, $model, 'Product variant updated successfully');
+            try {
+                if ($model->save()) {
+                    return $this->json(true, $model, 'Product variant updated successfully');
+                }
+            } catch (\Throwable $exception) {
+                Yii::error($exception->getMessage(), __METHOD__);
+                return $this->json(false, null, 'Internal server error', 500);
+            }
         }
 
-        return $this->json(false, $model->errors, 'Validation failed', 422);
+        return $this->json(false, $form->errors, 'Validation failed', 422);
     }
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'Product variant deleted successfully');
-    }
-    protected function findModel($id)
-    {
-        if (($model = ProductVariants::findOne(['id' => $id])) !== null) {
-            return $model;
+        $model = ProductVariants::findOne($id);
+        if (!$model) {
+            return $this->json(false, null, 'Product variant not found', 404);
+        }
+        try {
+            if ($model->delete()) {
+                return $this->json(true, null, 'Product variant deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        return $this->json(false, null, 'Failed to delete product variant', 500);
     }
+
+
 }

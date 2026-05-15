@@ -57,7 +57,7 @@ $config = [
             'rules' => [
                 [
                     'class' => 'yii\rest\UrlRule',
-                    'controller' => ['product', 'post-product', 'brand', 'category', 'product-attribute'],
+                    'controller' => ['product', 'post-product', 'brand', 'category', 'product-attribute', 'product-variant', 'coupon', 'order', 'cart', 'user-address', 'post'],
                     //dùng nếu route ko có "s" ở cuối (ví dụ: api/product thay vì api/products)
                     'pluralize' => false,
                 ],

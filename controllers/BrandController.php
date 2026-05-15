@@ -6,6 +6,7 @@ use app\models\Brands;
 use app\models\forms\Brand\CreateBrandForm;
 use app\models\forms\Brand\UpdateBrandForm;
 use app\models\response\Brand\BrandResponse;
+use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
@@ -64,9 +65,15 @@ class BrandController extends BaseController
         $model->name = $form->name;
         $model->slug = $form->slug;
         $model->status = $form->status;
-        if ($model->save()) {
-            return $this->json(true, $model, 'Brand created successfully', 201);
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Brand created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
+
         return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
@@ -79,18 +86,29 @@ class BrandController extends BaseController
 
         $form = new UpdateBrandForm();
         $form->id = $id;
-        $form->load($this->request->bodyParams, '');
+        $data = $this->request->bodyParams;
+        if (empty($data)) {
+            $data = $this->request->post();
+        }
+        $form->load($data, '');
+
         if (!$form->validate()) {
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
 
-        $model->name = $form->name;
-        $model->slug = $form->slug;
-        $model->status = $form->status;
+        try {
+            $model->name = $form->name;
+            $model->slug = $form->slug;
+            $model->status = $form->status;
 
-        if ($model->save()) {
-            return $this->json(true, $model, 'Brand updated successfully');
+            if ($model->save()) {
+                return $this->json(true, $model, 'Brand updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
+
         return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
@@ -100,8 +118,16 @@ class BrandController extends BaseController
         if (!$model) {
             return $this->json(false, null, 'Brand not found', 404);
         }
-        $model->delete();
-        return $this->json(true, null, 'Brand deleted successfully');
+        try {
+            if ($model->delete()) {
+                return $this->json(true, null, 'Brand deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, null, 'Failed to delete brand', 500);
     }
 
 }

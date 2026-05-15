@@ -4,44 +4,40 @@ namespace app\controllers;
 
 use app\models\Coupons;
 use app\models\forms\Coupon\CreateCouponForm;
-use app\models\search\CouponSearch;
+use app\models\forms\Coupon\UpdateCouponForm;
+use app\models\response\Coupon\CouponResponse;
 use Yii;
-use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
 
 class CouponController extends BaseController
 {
-    public $modelClass = 'app\\models\\Coupons';
-
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
+    public $modelClass = 'app\models\Coupons';
+    public function actions()
     {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
+        $actions = parent::actions();
+
+        unset($actions['index']);
+        unset($actions['view']);
+        unset($actions['create']);
+        unset($actions['update']);
+        unset($actions['delete']);
+
+        return $actions;
     }
+
     public function actionIndex()
     {
-        $searchModel = new CouponSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
+        $query = CouponResponse::find();
+        $data = $this->paginate($query);
         return $this->json(true, $data, 'Coupons retrieved successfully');
     }
 
     public function actionView($id)
     {
-        $model = $this->findModel($id);
-        return $this->json(true, $model, 'Coupon retrieved successfully');
+        $model = CouponResponse::findOne(['id' => $id]);
+        if ($model) {
+            return $this->json(true, $model, 'Coupon retrieved successfully');
+        }
+        return $this->json(false, null, 'Coupon not found', 404);
     }
 
     public function actionCreate()
@@ -60,17 +56,20 @@ class CouponController extends BaseController
             $coupon->used_count = 0;
             $coupon->starts_at = strtotime($form->starts_at);
             $coupon->expires_at = strtotime($form->expires_at);
-            $coupon->is_active = 1;
-
-            if ($coupon->save()) {
-                return $this->json(true, $coupon, 'Coupon created successfully', 201);
-            }
-
-            Yii::error('Failed to save coupon: ' . json_encode($coupon->errors));
-            foreach ($coupon->getErrors() as $attribute => $messages) {
-                foreach ($messages as $message) {
-                    $form->addError($attribute, $message);
+            try {
+                if ($coupon->save()) {
+                    return $this->json(true, $coupon, 'Coupon created successfully', 201);
                 }
+
+                Yii::error('Failed to save coupon: ' . json_encode($coupon->errors));
+                foreach ($coupon->getErrors() as $attribute => $messages) {
+                    foreach ($messages as $message) {
+                        $form->addError($attribute, $message);
+                    }
+                }
+            } catch (\Throwable $exception) {
+                Yii::error($exception->getMessage(), __METHOD__);
+                return $this->json(false, null, 'Internal server error', 500);
             }
         }
 
@@ -79,29 +78,59 @@ class CouponController extends BaseController
 
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
+        $model = CouponResponse::findOne(['id' => $id]);
+        if (!$model) {
+            return $this->json(false, null, 'Coupon not found', 404);
+        }
+        $form = new UpdateCouponForm();
+        $form->id = $id;
+        $data = $this->request->bodyParams;
+        if (empty($data)) {
+            $data = $this->request->post();
+        }
+        $form->load($data, '');
 
-        $model->load($this->request->bodyParams, '');
+        if ($form->validate()) {
+            $model->code = $form->code;
+            $model->type = $form->type;
+            $model->value = $form->value;
+            $model->min_order_value = $form->min_order_value;
+            $model->max_discount = $form->max_discount;
+            $model->max_usage = $form->max_usage;
+            $model->starts_at = strtotime($form->starts_at);
+            $model->expires_at = strtotime($form->expires_at);
+            $model->is_active = $form->is_active;
 
-        if ($model->save()) {
-            return $this->json(true, $model, 'Coupon updated successfully');
+            try {
+                if ($model->save()) {
+                    return $this->json(true, $model, 'Coupon updated successfully');
+                }
+            } catch (\Throwable $exception) {
+                Yii::error($exception->getMessage(), __METHOD__);
+                return $this->json(false, null, 'Internal server error', 500);
+            }
         }
 
-        return $this->json(false, $model->errors, 'Validation failed', 422);
+        return $this->json(false, $form->errors, 'Validation failed', 422);
     }
 
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        return $this->json(true, null, 'Coupon deleted successfully');
-    }
-
-    protected function findModel($id)
-    {
-        if (($model = Coupons::findOne(['id' => $id])) !== null) {
-            return $model;
+        $model = CouponResponse::findOne(['id' => $id]);
+        if (!$model) {
+            return $this->json(false, null, 'Coupon not found', 404);
+        }
+        try {
+            if ($model->delete()) {
+                return $this->json(true, null, 'Coupon deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        return $this->json(false, null, 'Failed to delete coupon', 500);
     }
+
+
 }

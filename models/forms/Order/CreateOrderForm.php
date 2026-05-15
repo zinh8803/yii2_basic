@@ -19,6 +19,8 @@ class CreateOrderForm extends Model
     public $payment_method;
     public $payment_status;
     public $status;
+    public $coupon_code;
+    public $order_items = [];
 
     // Order item fields (arrays)
     public $item_product_id = [];
@@ -39,12 +41,13 @@ class CreateOrderForm extends Model
             [['email', 'receiver_name', 'status'], 'string', 'max' => 255],
             [['receiver_phone'], 'string', 'max' => 20],
             [['payment_method', 'payment_status'], 'string', 'max' => 50],
+            [['coupon_code'], 'string', 'max' => 50],
+            [['order_items'], 'safe'],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
-
             // Validate each item row
-            ['item_product_id', 'each', 'rule' => ['integer']],
-            ['item_variant_id', 'each', 'rule' => ['integer']],
-            ['item_quantity', 'each', 'rule' => ['integer', 'min' => 1]],
+                        // ['item_product_id', 'each', 'rule' => ['integer']],
+                        // ['item_variant_id', 'each', 'rule' => ['integer']],
+                        // ['item_quantity', 'each', 'rule' => ['integer', 'min' => 1]],
         ];
     }
 }

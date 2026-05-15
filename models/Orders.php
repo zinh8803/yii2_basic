@@ -21,11 +21,11 @@ use yii\behaviors\TimestampBehavior;
  * @property float $total
  * @property float $shipping_fee
  * @property float $discount_amount
- * @property int|null $created_at
- * @property int|null $updated_at
  * @property string|null $payment_method
  * @property string|null $payment_status
  * @property string $status
+ * @property int|null $created_at
+ * @property int|null $updated_at
  *
  * @property CouponUsages[] $couponUsages
  * @property OrderItems[] $orderItems
