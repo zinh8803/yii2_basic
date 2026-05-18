@@ -31,6 +31,11 @@ class Tags extends \yii\db\ActiveRecord
         return 'tags';
     }
 
+    public static function find()
+    {
+        return new query\TagQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

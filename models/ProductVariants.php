@@ -38,6 +38,11 @@ class ProductVariants extends \yii\db\ActiveRecord
         return 'product_variants';
     }
 
+    public static function find()
+    {
+        return new query\ProductVariantQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

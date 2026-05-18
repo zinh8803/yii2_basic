@@ -30,6 +30,11 @@ class PostProducts extends \yii\db\ActiveRecord
         return 'post_products';
     }
 
+    public static function find()
+    {
+        return new query\PostProductQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

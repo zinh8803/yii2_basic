@@ -3,36 +3,24 @@
 namespace app\controllers;
 
 use app\models\Taggables;
+use app\models\search\TaggableSearch;
 use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
 class TaggableController extends BaseController
 {
-    public $modelClass = 'app\\models\\Taggables';
+    public $modelClass = 'app\models\Taggables';
 
     /**
      * @inheritDoc
      */
-    public function behaviors()
-    {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
-    }
 
     public function actionIndex()
     {
-        $query = Taggables::find();
-        $data = $this->paginate($query);
+        $searchModel = new TaggableSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Taggables retrieved successfully');
     }
 

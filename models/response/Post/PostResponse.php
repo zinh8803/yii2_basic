@@ -14,7 +14,12 @@ class PostResponse extends Posts
             'title' => 'title',
             'slug' => 'slug',
             'image' => function () {
-                $primaryResource = $this->getResources()->andWhere(['is_primary' => 1])->one();
+                $relatedRecords = $this->getRelatedRecords();
+                $primaryResource = $relatedRecords['primaryResource'] ?? null;
+                if ($primaryResource === null && !$this->isRelationPopulated('primaryResource')) {
+                    $primaryResource = $this->getPrimaryResource()->with(['file'])->one();
+                }
+
                 if ($primaryResource && $primaryResource->file) {
                     return $primaryResource->file->url;
                 }

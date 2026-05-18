@@ -33,6 +33,11 @@ class Categories extends \yii\db\ActiveRecord
         return 'categories';
     }
 
+    public static function find()
+    {
+        return new query\CategoryQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -120,7 +125,7 @@ class Categories extends \yii\db\ActiveRecord
      */
     public function getChildren()
     {
-        return $this->hasMany(Categories::class, ['parent_id' => 'id']);
+        return $this->hasMany(Categories::class, ['parent_id' => 'id'])->andWhere(['status' => 1]);
     }
 
     /**

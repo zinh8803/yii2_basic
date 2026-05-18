@@ -6,29 +6,18 @@ use app\models\forms\ProductVariant\UpdateProductVariantForm;
 use app\models\ProductVariants;
 use app\models\forms\ProductVariant\CreateProductVariantForm;
 use app\models\response\ProductVariant\ProductVariantResponse;
+use app\models\search\ProductVariantSearch;
 use Yii;
 
 class ProductVariantController extends BaseController
 {
     public $modelClass = 'app\models\ProductVariants';
 
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = ProductVariantResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new ProductVariantSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Product variants retrieved successfully');
     }
 
@@ -43,25 +32,14 @@ class ProductVariantController extends BaseController
     public function actionCreate()
     {
         $form = new CreateProductVariantForm();
-
         $form->load($this->request->bodyParams, '');
-
-        if ($form->validate()) {
-            return $this->json(true, $form, 'Product variant created successfully', 201);
-        }
-        $model = new ProductVariants();
-        $model->name = $form->name;
-        $model->product_id = $form->product_id;
-        $model->sku = $form->sku;
-        $model->price = $form->price;
-        $model->sale_price = $form->sale_price;
-        $model->cost_price = $form->cost_price;
-        $model->stock = $form->stock;
-        $model->weight = $form->weight;
-        $model->is_active = $form->is_active;
         try {
-            if ($model->save()) {
-                return $this->json(true, $model, 'Product variant created successfully', 201);
+            if ($form->validate()) {
+                $model = new ProductVariants();
+                $model->setAttributes($form->attributes, false);
+                if ($model->save()) {
+                    return $this->json(true, $model, 'Product variant created successfully', 201);
+                }
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
@@ -84,14 +62,7 @@ class ProductVariantController extends BaseController
         $form->load($data, '');
 
         if ($form->validate()) {
-            $model->name = $form->name;
-            $model->product_id = $form->product_id;
-            $model->price = $form->price;
-            $model->sale_price = $form->sale_price;
-            $model->cost_price = $form->cost_price;
-            $model->stock = $form->stock;
-            $model->weight = $form->weight;
-            $model->is_active = $form->is_active;
+            $model->setAttributes($form->attributes, false);
 
             try {
                 if ($model->save()) {

@@ -1,7 +1,6 @@
 <?php
-namespace app\models\response;
+namespace app\models\response\Product;
 use app\models\Products;
-use app\models\Resources;
 
 class ProductResponse extends Products
 {
@@ -14,7 +13,12 @@ class ProductResponse extends Products
             'brand_id',
             'slug',
             'image' => function () {
-                $primaryResource = $this->getResources()->andWhere(['is_primary' => 1])->one();
+                $relatedRecords = $this->getRelatedRecords();
+                $primaryResource = $relatedRecords['primaryResource'] ?? null;
+                if ($primaryResource === null && !$this->isRelationPopulated('primaryResource')) {
+                    $primaryResource = $this->getPrimaryResource()->with(['file'])->one();
+                }
+
                 if ($primaryResource && $primaryResource->file) {
                     return $primaryResource->file->url;
                 }

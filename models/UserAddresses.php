@@ -32,6 +32,11 @@ class UserAddresses extends \yii\db\ActiveRecord
         return 'user_addresses';
     }
 
+    public static function find()
+    {
+        return new query\UserAddressQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

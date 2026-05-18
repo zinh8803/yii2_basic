@@ -3,9 +3,9 @@
 namespace app\controllers;
 
 use app\models\AttributeValues;
+use app\models\search\AttributeValueSearch;
 use Yii;
 use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
 
 class AttributeValueController extends BaseController
 {
@@ -13,18 +13,17 @@ class AttributeValueController extends BaseController
 
     public function actionIndex()
     {
-        $query = AttributeValues::find();
-        $data = $this->paginate($query);
+        $searchModel = new AttributeValueSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Attribute values retrieved successfully');
     }
-
 
     public function actionView($id)
     {
         $model = $this->findModel($id);
         return $this->json(true, $model, 'Attribute value retrieved successfully');
     }
-
 
     public function actionCreate()
     {
@@ -43,7 +42,6 @@ class AttributeValueController extends BaseController
         return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
@@ -61,7 +59,6 @@ class AttributeValueController extends BaseController
         return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
-
     public function actionDelete($id)
     {
         try {
@@ -76,7 +73,6 @@ class AttributeValueController extends BaseController
 
         return $this->json(false, null, 'Failed to delete attribute value', 500);
     }
-
 
     protected function findModel($id)
     {

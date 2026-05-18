@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\ProductVariants;
+use app\models\response\ProductVariant\ProductVariantResponse;
 
 /**
  * ProductVariantSearch represents the model behind the search form of `app\models\ProductVariants`.
@@ -18,8 +19,8 @@ class ProductVariantSearch extends ProductVariants
     public function rules()
     {
         return [
-            [['id', 'product_id', 'created_at', 'updated_at'], 'integer'],
-            [['name', 'sku', 'status', 'keyword'], 'safe'],
+            [['id', 'product_id', 'stock', 'is_active', 'created_at', 'updated_at'], 'integer'],
+            [['name', 'sku', 'keyword'], 'safe'],
             [['price', 'sale_price', 'cost_price', 'weight'], 'number'],
         ];
     }
@@ -41,9 +42,9 @@ class ProductVariantSearch extends ProductVariants
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = ProductVariants::find();
+        $query = ProductVariantResponse::find();
 
         // add conditions that should always apply here
 
@@ -66,15 +67,23 @@ class ProductVariantSearch extends ProductVariants
             'price' => $this->price,
             'sale_price' => $this->sale_price,
             'cost_price' => $this->cost_price,
+            'stock' => $this->stock,
             'weight' => $this->weight,
+            'is_active' => $this->is_active,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ]);
 
         $query->andFilterWhere(['like', 'name', $this->name])
-            ->andFilterWhere(['like', 'sku', $this->sku])
-            ->andFilterWhere(['like', 'status', $this->status])
-            ->andFilterWhere(['like', 'keyword', $this->keyword]);
+            ->andFilterWhere(['like', 'sku', $this->sku]);
+
+        if ($this->keyword) {
+            $query->andWhere([
+                'or',
+                ['like', 'name', $this->keyword],
+                ['like', 'sku', $this->keyword],
+            ]);
+        }
 
         return $dataProvider;
     }

@@ -8,25 +8,11 @@ use app\models\ProductVariants;
 use app\models\forms\Cart\AddToCartForm;
 use app\models\response\Cart\CartResponse;
 use Yii;
+use yii\web\NotFoundHttpException;
 
 class CartController extends BaseController
 {
     public $modelClass = 'app\models\Carts';
-
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
-
     // public function actionIndex()
     // {
     //     $query = Carts::find();
@@ -49,10 +35,20 @@ class CartController extends BaseController
         $model->load($this->request->bodyParams, '');
 
         if ($model->validate()) {
+            $transaction = Yii::$app->db->beginTransaction();
             try {
                 $cart = $this->addItemFromForm($model);
+                $transaction->commit();
                 return $this->json(true, $cart, 'Cart created successfully', 201);
+            } catch (NotFoundHttpException $exception) {
+                if ($transaction->isActive) {
+                    $transaction->rollBack();
+                }
+                return $this->json(false, null, $exception->getMessage(), 404);
             } catch (\Throwable $exception) {
+                if ($transaction->isActive) {
+                    $transaction->rollBack();
+                }
                 Yii::error($exception->getMessage(), __METHOD__);
                 return $this->json(false, null, 'Internal server error', 500);
             }
@@ -63,8 +59,12 @@ class CartController extends BaseController
 
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
-        return $this->json(true, $model, 'Use cart item actions to update quantities.');
+        try {
+            $model = $this->findModel($id);
+            return $this->json(true, $model, 'Use cart item actions to update quantities.');
+        } catch (NotFoundHttpException $exception) {
+            return $this->json(false, null, $exception->getMessage(), 404);
+        }
     }
 
     public function actionDelete($id)
@@ -74,6 +74,8 @@ class CartController extends BaseController
             if ($model->delete()) {
                 return $this->json(true, null, 'Cart deleted successfully');
             }
+        } catch (NotFoundHttpException $exception) {
+            return $this->json(false, null, $exception->getMessage(), 404);
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
             return $this->json(false, null, 'Internal server error', 500);
@@ -88,7 +90,7 @@ class CartController extends BaseController
             return $model;
         }
 
-        return $this->json(false, null, 'Cart not found', 404);
+        throw new NotFoundHttpException('Cart not found');
     }
 
     // public function actionAddItem()
@@ -117,30 +119,94 @@ class CartController extends BaseController
             return $this->json(false, null, 'items must be a non-empty array', 400);
         }
 
-        try {
-            $cart = null;
-            foreach ($items as $index => $item) {
-                if (!is_array($item)) {
-                    return $this->json(false, null, 'items[' . $index . '] must be an object', 400);
-                }
-
-                $form = new AddToCartForm();
-                $form->user_id = $userId;
-                $form->product_id = $item['product_id'] ?? null;
-                $form->product_variant_id = $item['product_variant_id'] ?? null;
-                $form->quantity = $item['quantity'] ?? null;
-
-                if (!$form->validate()) {
-                    return $this->json(false, $form->errors, 'Validation failed', 422);
-                }
-
-                $cart = $this->addItemFromForm($form);
+        $forms = [];
+        foreach ($items as $index => $item) {
+            if (!is_array($item)) {
+                return $this->json(false, null, 'items[' . $index . '] must be an object', 400);
             }
 
+            $form = new AddToCartForm();
+            $form->user_id = $userId;
+            $form->product_id = $item['product_id'] ?? null;
+            $form->product_variant_id = $item['product_variant_id'] ?? null;
+            $form->quantity = $item['quantity'] ?? null;
+
+            if (!$form->validate()) {
+                return $this->json(false, $form->errors, 'Validation failed', 422);
+            }
+
+            $forms[] = $form;
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $cart = $this->getOrCreateCartByUserId($userId);
+            $this->addItemsFromForms($cart, $forms);
+            $this->recalculateTotal($cart);
+
+            $transaction->commit();
             return $this->json(true, $cart, 'Cart items added successfully');
+        } catch (NotFoundHttpException $exception) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
+            return $this->json(false, null, $exception->getMessage(), 404);
         } catch (\Throwable $exception) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
             Yii::error($exception->getMessage(), __METHOD__);
             return $this->json(false, null, 'Internal server error', 500);
+        }
+    }
+
+    private function addItemsFromForms(Carts $cart, array $forms): void
+    {
+        $variantIds = array_values(array_unique(array_map(static function (AddToCartForm $form) {
+            return (int) $form->product_variant_id;
+        }, $forms)));
+
+        $variants = ProductVariants::find()
+            ->where(['id' => $variantIds])
+            ->indexBy('id')
+            ->all();
+
+        $existingItems = CartItems::find()
+            ->where([
+                'cart_id' => $cart->id,
+                'product_variant_id' => $variantIds,
+            ])
+            ->indexBy('product_variant_id')
+            ->all();
+
+        foreach ($forms as $form) {
+            $variant = $variants[(int) $form->product_variant_id] ?? null;
+            if ($variant === null || (int) $variant->product_id !== (int) $form->product_id) {
+                throw new NotFoundHttpException('Product variant not found');
+            }
+
+            $item = $existingItems[(int) $variant->id] ?? null;
+            $price = $variant->sale_price !== null ? $variant->sale_price : $variant->price;
+
+            if ($item === null) {
+                $item = new CartItems();
+                $item->setAttributes([
+                    'cart_id' => $cart->id,
+                    'product_id' => $form->product_id,
+                    'product_variant_id' => $variant->id,
+                    'quantity' => 0,
+                ], false);
+                $existingItems[(int) $variant->id] = $item;
+            }
+
+            $item->setAttributes([
+                'quantity' => (int) $item->quantity + (int) $form->quantity,
+                'price' => $price,
+            ], false);
+
+            if (!$item->save()) {
+                throw new \RuntimeException('Failed to save cart item: ' . json_encode($item->errors));
+            }
         }
     }
 
@@ -200,6 +266,9 @@ class CartController extends BaseController
     public function actionRemoveItems()
     {
         $body = $this->request->bodyParams;
+        if (empty($body)) {
+            $body = $this->request->post();
+        }
         $userId = (int) ($body['user_id'] ?? 0);
         $itemIds = $body['item_ids'] ?? null;
 
@@ -210,30 +279,43 @@ class CartController extends BaseController
             return $this->json(false, null, 'item_ids must be a non-empty array', 400);
         }
 
+        $transaction = Yii::$app->db->beginTransaction();
         try {
-            $cart = $this->getOrCreateCartByUserId($userId);
-            $deleted = 0;
-
-            foreach ($itemIds as $itemId) {
-                $itemId = (int) $itemId;
-                if ($itemId < 1) {
-                    continue;
-                }
-
-                $item = CartItems::findOne([
-                    'id' => $itemId,
-                    'cart_id' => $cart->id,
-                ]);
-
-                if ($item !== null) {
-                    $item->delete();
-                    $deleted++;
-                }
+            $cart = Carts::findOne(['user_id' => $userId]);
+            if ($cart === null) {
+                $transaction->rollBack();
+                return $this->json(false, null, 'Cart not found', 404);
             }
 
+            $itemIds = array_values(array_filter(array_map('intval', $itemIds), static fn($id) => $id > 0));
+            if (empty($itemIds)) {
+                $transaction->rollBack();
+                return $this->json(false, null, 'item_ids must contain positive integers', 400);
+            }
+
+            $existingItemCount = CartItems::find()
+                ->where([
+                    'id' => $itemIds,
+                    'cart_id' => $cart->id,
+                ])
+                ->count();
+            if ((int) $existingItemCount === 0) {
+                $transaction->rollBack();
+                return $this->json(false, null, 'Cart items not found for this user', 404);
+            }
+
+            $deleted = CartItems::deleteAll([
+                'id' => $itemIds,
+                'cart_id' => $cart->id,
+            ]);
+
             $this->recalculateTotal($cart);
+            $transaction->commit();
             return $this->json(true, ['deleted' => $deleted, 'cart' => $cart], 'Cart items removed successfully');
         } catch (\Throwable $exception) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
             Yii::error($exception->getMessage(), __METHOD__);
             return $this->json(false, null, 'Internal server error', 500);
         }
@@ -254,8 +336,10 @@ class CartController extends BaseController
             }
 
             CartItems::deleteAll(['cart_id' => $cart->id]);
-            $cart->total = 0;
-            $cart->save(false, ['total']);
+            $cart->setAttributes(['total' => 0], false);
+            if (!$cart->save(false, ['total'])) {
+                throw new \RuntimeException('Failed to update cart total.');
+            }
 
             return $this->json(true, $cart, 'Cart cleared successfully');
         } catch (\Throwable $exception) {
@@ -272,30 +356,34 @@ class CartController extends BaseController
         }
 
         $cart = new Carts();
-        $cart->user_id = $userId;
-        $cart->total = 0;
-        $cart->save(false);
+        $cart->setAttributes([
+            'user_id' => $userId,
+            'total' => 0,
+        ], false);
+        if (!$cart->save(false)) {
+            throw new \RuntimeException('Failed to create cart.');
+        }
 
         return $cart;
     }
 
     private function recalculateTotal(Carts $cart)
     {
-        $total = 0;
+        $total = (float) CartItems::find()
+            ->where(['cart_id' => $cart->id])
+            ->sum('price * quantity');
 
-        foreach ($cart->cartItems as $item) {
-            $total += $item->price * $item->quantity;
+        $cart->setAttributes(['total' => $total], false);
+        if (!$cart->save(false, ['total'])) {
+            throw new \RuntimeException('Failed to update cart total.');
         }
-
-        $cart->total = $total;
-        $cart->save(false, ['total']);
     }
 
     private function addItemFromForm(AddToCartForm $form)
     {
         $variant = ProductVariants::findOne(['id' => $form->product_variant_id]);
         if ($variant === null || (int) $variant->product_id !== (int) $form->product_id) {
-            return $this->json(false, null, 'Product variant not found', 404);
+            throw new NotFoundHttpException('Product variant not found');
         }
 
         $cart = $this->getOrCreateCartByUserId((int) $form->user_id);
@@ -309,17 +397,23 @@ class CartController extends BaseController
 
         if ($item === null) {
             $item = new CartItems();
-            $item->cart_id = $cart->id;
-            $item->product_id = $form->product_id;
-            $item->product_variant_id = $variant->id;
-            $item->quantity = $form->quantity;
-            $item->price = $price;
+            $item->setAttributes([
+                'cart_id' => $cart->id,
+                'product_id' => $form->product_id,
+                'product_variant_id' => $variant->id,
+                'quantity' => $form->quantity,
+                'price' => $price,
+            ], false);
         } else {
-            $item->quantity += $form->quantity;
-            $item->price = $price;
+            $item->setAttributes([
+                'quantity' => (int) $item->quantity + (int) $form->quantity,
+                'price' => $price,
+            ], false);
         }
 
-        $item->save();
+        if (!$item->save()) {
+            throw new \RuntimeException('Failed to save cart item: ' . json_encode($item->errors));
+        }
         $this->recalculateTotal($cart);
 
         return $cart;

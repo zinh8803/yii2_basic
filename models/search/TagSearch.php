@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Tags;
+use app\models\response\Tag\TagResponse;
 
 /**
  * TagSearch represents the model behind the search form of `app\models\Tags`.
@@ -39,9 +40,9 @@ class TagSearch extends Tags
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = Tags::find();
+        $query = TagResponse::find();
 
         // add conditions that should always apply here
 

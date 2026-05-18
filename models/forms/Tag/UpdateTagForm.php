@@ -10,13 +10,14 @@ class UpdateTagForm extends Model
     public $name;
     public $slug;
     public $type;
+    public $description;
     public $decription;
 
     public function rules()
     {
         return [
             [['id'], 'integer'],
-            [['name', 'slug', 'type', 'decription'], 'string', 'max' => 255],
+            [['name', 'slug', 'type', 'description', 'decription'], 'string', 'max' => 255],
         ];
     }
 }

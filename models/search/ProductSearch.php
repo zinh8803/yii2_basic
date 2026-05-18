@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Products;
+use app\models\response\Product\ProductResponse;
 
 /**
  * ProductSearch represents the model behind the search form of `app\models\Products`.
@@ -41,17 +42,17 @@ class ProductSearch extends Products
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = Products::find();
+        $query = ProductResponse::find()->with(['primaryResource.file']);
 
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            'pagination' => [
-                'pageSize' => 10,
-            ],
+            // 'pagination' => [
+            //     'pageSize' => 10,
+            // ],
         ]);
 
         $this->load($params, $formName);
@@ -74,8 +75,16 @@ class ProductSearch extends Products
 
         $query->andFilterWhere(['like', 'name', $this->name])
             ->andFilterWhere(['like', 'slug', $this->slug])
-            ->andFilterWhere(['like', 'description', $this->description])
-            ->andFilterWhere(['like', 'keyword', $this->keyword]);
+            ->andFilterWhere(['like', 'description', $this->description]);
+
+        if ($this->keyword) {
+            $query->andWhere([
+                'or',
+                ['like', 'name', $this->keyword],
+                ['like', 'slug', $this->keyword],
+                ['like', 'description', $this->keyword],
+            ]);
+        }
 
         return $dataProvider;
     }

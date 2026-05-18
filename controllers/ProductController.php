@@ -11,39 +11,28 @@ use Yii;
 use yii\base\Model;
 use yii\helpers\FileHelper;
 use app\controllers\BaseController as BaseController;
-use app\models\response\ProductResponse;
+use app\models\response\Product\ProductResponse;
+use app\models\search\ProductSearch;
 use yii\web\UploadedFile;
-use yii\filters\VerbFilter;
 
 class ProductController extends BaseController
 {
     public $modelClass = 'app\models\Products';
-
-
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = ProductResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new ProductSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, "Get list product successfully");
     }
 
 
     public function actionView($id)
     {
-        $model = ProductResponse::findOne($id);
+        $model = ProductResponse::find()
+            ->with(['primaryResource.file'])
+            ->where(['id' => $id])
+            ->one();
         if (!$model) {
             return $this->json(false, null, 'Product not found', 404);
         }
@@ -67,10 +56,9 @@ class ProductController extends BaseController
         }
 
         $product = new Products();
-        $product->slug = $form->slug;
 
         try {
-            if ($this->saveProduct($product, $form)) {
+            if ($this->createProduct($product, $form)) {
                 $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
                 return $this->json(true, $responseModel, 'Product created successfully', 201);
             }
@@ -94,9 +82,6 @@ class ProductController extends BaseController
             $form->imageFile = UploadedFile::getInstanceByName('imageFile');
         } else {
             $data = $request->bodyParams;
-            if (empty($data)) {
-                $data = $request->put();
-            }
         }
 
         $form->load($data, '');
@@ -115,7 +100,7 @@ class ProductController extends BaseController
         }
 
         try {
-            if ($this->saveProduct($product, $form)) {
+            if ($this->updateProduct($product, $form)) {
                 $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
                 return $this->json(true, $responseModel, 'Product updated successfully');
             }
@@ -157,12 +142,19 @@ class ProductController extends BaseController
         return $form;
     }
 
-    private function saveProduct(Products $product, CreateProductForm|UpdateProductForm $form): bool
+    private function createProduct(Products $product, CreateProductForm $form): bool
     {
         $transaction = Yii::$app->db->beginTransaction();
 
         try {
-            $this->applyFormToProduct($product, $form);
+            $product->setAttributes([
+                'name' => $form->name,
+                'slug' => $form->slug,
+                'description' => $form->description,
+                'status' => $form->status,
+                'category_id' => $form->category_id,
+                'brand_id' => $form->brand_id,
+            ], false);
 
             if (!$product->save()) {
                 $this->addModelErrors($form, $product);
@@ -170,10 +162,6 @@ class ProductController extends BaseController
             }
 
             if ($form->imageFile instanceof UploadedFile) {
-                if ($form instanceof UpdateProductForm) {
-                    $this->markProductImagesNonPrimary($product);
-                }
-
                 $this->attachImage($product, $form->imageFile, $form, true);
             }
 
@@ -188,20 +176,42 @@ class ProductController extends BaseController
         }
     }
 
-    private function applyFormToProduct(Products $product, CreateProductForm|UpdateProductForm $form): void
+    private function updateProduct(Products $product, UpdateProductForm $form): bool
     {
-        $product->name = $form->name;
-        $product->description = $form->description;
-        $product->status = $form->status;
-        $product->category_id = $form->category_id;
-        $product->brand_id = $form->brand_id;
+        $transaction = Yii::$app->db->beginTransaction();
 
-        if ($form instanceof UpdateProductForm) {
-            $product->slug = $form->slug;
+        try {
+            $product->setAttributes([
+                'name' => $form->name,
+                'slug' => $form->slug,
+                'description' => $form->description,
+                'status' => $form->status,
+                'category_id' => $form->category_id,
+                'brand_id' => $form->brand_id,
+            ], false);
+
+            if (!$product->save()) {
+                $this->addModelErrors($form, $product);
+                throw new \RuntimeException('Failed to save product.');
+            }
+
+            if ($form->imageFile instanceof UploadedFile) {
+                $this->markProductImagesNonPrimary($product);
+                $this->attachImage($product, $form->imageFile, $form, true);
+            }
+
+            $transaction->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
+            Yii::error($e->getMessage(), __METHOD__);
+            return false;
         }
     }
 
-    private function attachImage(Products $product, UploadedFile $imageFile, CreateProductForm|UpdateProductForm $form, bool $isPrimary = true): void
+    private function attachImage(Products $product, UploadedFile $imageFile, Model $form, bool $isPrimary = true): void
     {
         $uploadDir = Yii::getAlias('@webroot/uploads/products');
         FileHelper::createDirectory($uploadDir);
@@ -268,22 +278,15 @@ class ProductController extends BaseController
 
     private function markProductImagesNonPrimary(Products $product): void
     {
-        $resources = Resources::find()
-            ->where([
+        Resources::updateAll(
+            ['is_primary' => 0],
+            [
                 'resource_type' => 'product',
                 'resource_id' => $product->id,
                 'type' => 'image',
-            ])
-            ->all();
-
-        foreach ($resources as $resource) {
-            if ((int) $resource->is_primary === 0) {
-                continue;
-            }
-
-            $resource->is_primary = 0;
-            $resource->save(false, ['is_primary']);
-        }
+                'is_primary' => 1,
+            ]
+        );
     }
 
     private function addModelErrors(Model $form, Model $model): void
