@@ -47,6 +47,11 @@ class Orders extends \yii\db\ActiveRecord
         return 'orders';
     }
 
+    public static function find()
+    {
+        return new query\OrderQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

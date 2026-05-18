@@ -33,6 +33,11 @@ class Reviews extends \yii\db\ActiveRecord
         return 'reviews';
     }
 
+    public static function find()
+    {
+        return new query\ReviewQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

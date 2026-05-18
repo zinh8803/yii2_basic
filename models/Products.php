@@ -134,6 +134,16 @@ class Products extends \yii\db\ActiveRecord
             ->andWhere(['resource_type' => 'product']);
     }
 
+    public function getPrimaryResource()
+    {
+        return $this->hasOne(Resources::class, ['resource_id' => 'id'])
+            ->andWhere([
+                'resource_type' => 'product',
+                'type' => 'image',
+                'is_primary' => 1,
+            ]);
+    }
+
     /**
      * Gets query for [[CartItems]].
      *

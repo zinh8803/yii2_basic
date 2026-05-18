@@ -39,7 +39,7 @@ class UserAddressSearch extends UserAddresses
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
         $query = UserAddresses::find();
 

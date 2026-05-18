@@ -36,6 +36,11 @@ class Coupons extends \yii\db\ActiveRecord
         return 'coupons';
     }
 
+    public static function find()
+    {
+        return new query\CouponQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

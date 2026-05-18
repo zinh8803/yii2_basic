@@ -6,28 +6,17 @@ use app\models\Coupons;
 use app\models\forms\Coupon\CreateCouponForm;
 use app\models\forms\Coupon\UpdateCouponForm;
 use app\models\response\Coupon\CouponResponse;
+use app\models\search\CouponSearch;
 use Yii;
 
 class CouponController extends BaseController
 {
     public $modelClass = 'app\models\Coupons';
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = CouponResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new CouponSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Coupons retrieved successfully');
     }
 
@@ -47,15 +36,20 @@ class CouponController extends BaseController
 
         if ($form->validate()) {
             $coupon = new Coupons();
-            $coupon->code = $form->code;
-            $coupon->type = $form->type;
-            $coupon->value = $form->value;
-            $coupon->min_order_value = $form->min_order_value;
-            $coupon->max_discount = $form->max_discount;
-            $coupon->max_usage = $form->max_usage;
+
+            $coupon->setAttributes($form->getAttributes([
+                'code',
+                'type',
+                'value',
+                'min_order_value',
+                'max_discount',
+                'max_usage',
+            ]), false);
+
             $coupon->used_count = 0;
             $coupon->starts_at = strtotime($form->starts_at);
             $coupon->expires_at = strtotime($form->expires_at);
+
             try {
                 if ($coupon->save()) {
                     return $this->json(true, $coupon, 'Coupon created successfully', 201);
@@ -91,15 +85,17 @@ class CouponController extends BaseController
         $form->load($data, '');
 
         if ($form->validate()) {
-            $model->code = $form->code;
-            $model->type = $form->type;
-            $model->value = $form->value;
-            $model->min_order_value = $form->min_order_value;
-            $model->max_discount = $form->max_discount;
-            $model->max_usage = $form->max_usage;
+            $model->setAttributes($form->getAttributes([
+                'code',
+                'type',
+                'value',
+                'min_order_value',
+                'max_discount',
+                'max_usage',
+                'is_active',
+            ]), false);
             $model->starts_at = strtotime($form->starts_at);
             $model->expires_at = strtotime($form->expires_at);
-            $model->is_active = $form->is_active;
 
             try {
                 if ($model->save()) {

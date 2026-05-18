@@ -5,29 +5,17 @@ namespace app\controllers;
 use app\models\forms\PostProduct\CreatePostProductForm;
 use app\models\PostProducts;
 use app\models\response\PostProduct\PostProductResponse;
+use app\models\search\PostProductSearch;
 use Yii;
 
 class PostProductController extends BaseController
 {
     public $modelClass = 'app\models\PostProducts';
-
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = PostProductResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new PostProductSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Post products retrieved successfully');
     }
 
@@ -47,8 +35,7 @@ class PostProductController extends BaseController
 
         if ($form->validate()) {
             $model = new PostProducts();
-            $model->post_id = $form->post_id;
-            $model->product_id = $form->product_id;
+            $model->setAttributes($form->attributes, false);
             try {
                 if ($model->save()) {
                     return $this->json(true, $model, 'Post product created successfully', 201);
@@ -74,8 +61,7 @@ class PostProductController extends BaseController
         if (!$form->validate()) {
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
-        $model->post_id = $form->post_id;
-        $model->product_id = $form->product_id;
+        $model->setAttributes($form->attributes, false);
         try {
             if ($model->save()) {
                 return $this->json(true, $model, 'Post product updated successfully');

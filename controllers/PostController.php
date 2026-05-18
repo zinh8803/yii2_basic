@@ -8,6 +8,7 @@ use app\models\forms\Post\UpdatePostForm;
 use app\models\Posts;
 use app\models\Resources;
 use app\models\response\Post\PostResponse;
+use app\models\search\PostSearch;
 use Yii;
 use yii\base\Model;
 use yii\helpers\FileHelper;
@@ -17,30 +18,20 @@ use yii\web\UploadedFile;
 class PostController extends BaseController
 {
     public $modelClass = 'app\models\Posts';
-
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = PostResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new PostSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Posts retrieved successfully');
     }
 
     public function actionView($id)
     {
-        $model = PostResponse::findOne($id);
+        $model = PostResponse::find()
+            ->with(['primaryResource.file'])
+            ->where(['id' => $id])
+            ->one();
         if (!$model) {
             return $this->json(false, null, 'Post not found', 404);
         }
@@ -53,23 +44,15 @@ class PostController extends BaseController
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
         if ($isMultipart) {
             $form->load($request->post(), '');
-            $form->imageFile = UploadedFile::getInstanceByName('imageFile');
+            $form->imageFile = $this->getUploadedImageFile($form);
+            $this->logMissingMultipartImage($form->imageFile);
         } else {
             $form->load($this->request->bodyParams, '');
         }
 
         if ($form->validate()) {
             $post = new Posts();
-            $post->user_id = $form->user_id;
-            $post->title = $form->title;
-            $post->slug = $form->slug;
-            $post->excerpt = $form->excerpt;
-            $post->content = $form->content;
-            $post->status = $form->status;
-            $post->post_style = $form->post_style;
-            $post->meta_title = $form->meta_title;
-            $post->meta_description = $form->meta_description;
-            $post->published_at = $form->published_at;
+            $post->setAttributes($form->attributes, false);
 
             $transaction = Yii::$app->db->beginTransaction();
             try {
@@ -107,12 +90,10 @@ class PostController extends BaseController
 
         if ($isMultipart) {
             $data = $request->post();
-            $form->imageFile = UploadedFile::getInstanceByName('imageFile');
+            $form->imageFile = $this->getUploadedImageFile($form);
+            $this->logMissingMultipartImage($form->imageFile);
         } else {
             $data = $request->bodyParams;
-            if (empty($data)) {
-                $data = $request->put();
-            }
         }
 
         $form->load($data, '');
@@ -206,6 +187,42 @@ class PostController extends BaseController
         }
     }
 
+    private function getUploadedImageFile(Model $form): ?UploadedFile
+    {
+        $file = UploadedFile::getInstance($form, 'imageFile');
+        if ($file instanceof UploadedFile) {
+            return $file;
+        }
+
+        foreach (['imageFile', 'image_file', 'image', 'file'] as $fieldName) {
+            $file = UploadedFile::getInstanceByName($fieldName);
+            if ($file instanceof UploadedFile) {
+                return $file;
+            }
+
+            $files = UploadedFile::getInstancesByName($fieldName);
+            if (!empty($files)) {
+                return $files[0];
+            }
+        }
+
+        return null;
+    }
+
+    private function logMissingMultipartImage(?UploadedFile $imageFile): void
+    {
+        if ($imageFile !== null) {
+            return;
+        }
+
+        Yii::warning([
+            'message' => 'Multipart request did not include an uploaded image file.',
+            'post_keys' => array_keys(Yii::$app->request->post()),
+            'file_keys' => array_keys($_FILES),
+            'expected_file_keys' => ['imageFile', 'image_file', 'image', 'file'],
+        ], __METHOD__);
+    }
+
     private function applyFormToPost(Posts $post, UpdatePostForm $form): void
     {
         if ($form->user_id !== null) {
@@ -281,7 +298,21 @@ class PostController extends BaseController
 
     private function markPostImagesNonPrimary(Posts $post): void
     {
+        Resources::updateAll(
+            ['is_primary' => 0],
+            [
+                'resource_type' => 'post',
+                'resource_id' => $post->id,
+                'type' => 'image',
+                'is_primary' => 1,
+            ]
+        );
+    }
+
+    private function deletePostImageRecords(Posts $post): void
+    {
         $resources = Resources::find()
+            ->with(['file'])
             ->where([
                 'resource_type' => 'post',
                 'resource_id' => $post->id,
@@ -290,12 +321,21 @@ class PostController extends BaseController
             ->all();
 
         foreach ($resources as $resource) {
-            if ((int) $resource->is_primary === 0) {
-                continue;
+            $relatedRecords = $resource->getRelatedRecords();
+            $file = $relatedRecords['file'] ?? null;
+            $fullPath = null;
+            if ($file && $file->path) {
+                $fullPath = Yii::getAlias('@webroot/' . ltrim($file->path, '/\\'));
             }
 
-            $resource->is_primary = 0;
-            $resource->save(false, ['is_primary']);
+            $resource->delete();
+
+            if ($file !== null) {
+                $file->delete();
+            }
+            if ($fullPath !== null && is_file($fullPath)) {
+                @unlink($fullPath);
+            }
         }
     }
 

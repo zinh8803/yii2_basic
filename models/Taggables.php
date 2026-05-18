@@ -30,6 +30,11 @@ class Taggables extends \yii\db\ActiveRecord
         return 'taggables';
     }
 
+    public static function find()
+    {
+        return new query\TaggableQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

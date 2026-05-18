@@ -7,6 +7,7 @@ use app\models\forms\ProductAttribute\CreateProductAttribute;
 use app\models\forms\ProductAttribute\UpdateProductAttribute;
 use app\models\ProductAttributes;
 use app\models\response\ProductAttribute\ProductAttributeResponse;
+use app\models\search\ProductAttributeSearch;
 use Transliterator;
 use Yii;
 use yii\web\NotFoundHttpException;
@@ -15,24 +16,11 @@ use yii\filters\VerbFilter;
 class ProductAttributeController extends BaseController
 {
     public $modelClass = 'app\models\ProductAttributes';
-
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = ProductAttributeResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new ProductAttributeSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Product attributes retrieved successfully');
     }
     public function actionView($id)
@@ -60,13 +48,7 @@ class ProductAttributeController extends BaseController
         $transaction = Yii::$app->db->beginTransaction();
         try {
             $model = new ProductAttributes();
-            $model->product_id = $form->product_id;
-            $model->name = $form->name;
-            $model->type = $form->type;
-            $model->slug = $form->slug;
-            $model->is_variant = $form->is_variant;
-            $model->sort_order = $form->sort_order;
-
+            $model->setAttributes($form->attributes, false);
             if (!$model->save()) {
                 $transaction->rollBack();
                 return $this->json(false, $model->errors, 'Validation failed', 422);
@@ -106,12 +88,7 @@ class ProductAttributeController extends BaseController
 
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            $model->product_id = $form->product_id;
-            $model->name = $form->name;
-            $model->type = $form->type;
-            $model->slug = $form->slug;
-            $model->is_variant = $form->is_variant;
-            $model->sort_order = $form->sort_order;
+            $model->setAttributes($form->attributes, false);
 
             if (!$model->save()) {
                 $transaction->rollBack();

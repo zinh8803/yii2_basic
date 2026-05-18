@@ -6,28 +6,17 @@ use app\models\Tags;
 use app\models\forms\Tag\CreateTagForm;
 use app\models\forms\Tag\UpdateTagForm;
 use app\models\response\Tag\TagResponse;
+use app\models\search\TagSearch;
 use Yii;
 
 class TagController extends BaseController
 {
-    public $modelClass = 'app\\models\\Tags';
-
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
+    public $modelClass = 'app\models\Tags';
     public function actionIndex()
     {
-        $query = TagResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new TagSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Tags retrieved successfully');
     }
     public function actionView($id)
@@ -45,7 +34,7 @@ class TagController extends BaseController
 
         if ($form->validate()) {
             $model = new Tags();
-            $model->name = $form->name;
+            $model->setAttributes($form->attributes, false);
             try {
                 if ($model->save()) {
                     return $this->json(true, $model, 'Tag created successfully', 201);
@@ -67,10 +56,7 @@ class TagController extends BaseController
         $form = new UpdateTagForm();
         $form->load($this->request->bodyParams, '');
         if ($form->validate()) {
-            $model->name = $form->name;
-            $model->slug = $form->slug;
-            $model->type = $form->type;
-            $model->description = $form->description;
+            $model->setAttributes($form->attributes, false);
             try {
                 if ($model->save()) {
                     return $this->json(true, $model, 'Tag updated successfully');

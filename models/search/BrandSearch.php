@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Brands;
+use app\models\response\Brand\BrandResponse;
 
 /**
  * BrandSearch represents the model behind the search form of `app\models\Brands`.
@@ -40,9 +41,13 @@ class BrandSearch extends Brands
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '', $active = true)
     {
-        $query = Brands::find();
+        $query = BrandResponse::find();
+
+        if ($active) {
+            $query->andWhere(['status' => 1]);
+        }
 
         // add conditions that should always apply here
 
@@ -65,10 +70,17 @@ class BrandSearch extends Brands
             'updated_at' => $this->updated_at,
         ]);
 
-        $query->andFilterWhere(['like', 'name', $this->name])
-            ->andFilterWhere(['like', 'slug', $this->slug])
-            ->andFilterWhere(['like', 'status', $this->status])
-            ->andFilterWhere(['like', 'keyword', $this->keyword]);
+        $query->andFilterWhere(['status' => $this->status])
+            ->andFilterWhere(['like', 'name', $this->name])
+            ->andFilterWhere(['like', 'slug', $this->slug]);
+
+        if ($this->keyword) {
+            $query->andWhere([
+                'or',
+                ['like', 'name', $this->keyword],
+                ['like', 'slug', $this->keyword],
+            ]);
+        }
 
         return $dataProvider;
     }

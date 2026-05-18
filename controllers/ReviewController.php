@@ -3,6 +3,7 @@
 namespace app\controllers;
 
 use app\models\Reviews;
+use app\models\search\ReviewSearch;
 use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -31,8 +32,9 @@ class ReviewController extends BaseController
 
     public function actionIndex()
     {
-        $query = Reviews::find();
-        $data = $this->paginate($query);
+        $searchModel = new ReviewSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Reviews retrieved successfully');
     }
 

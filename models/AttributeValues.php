@@ -32,6 +32,11 @@ class AttributeValues extends \yii\db\ActiveRecord
         return 'attribute_values';
     }
 
+    public static function find()
+    {
+        return new query\AttributeValueQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

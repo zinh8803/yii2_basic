@@ -7,6 +7,18 @@ use yii\rest\ActiveController;
 
 class BaseController extends ActiveController
 {
+    public function actions()
+    {
+        $actions = parent::actions();
+
+        unset($actions['index']);
+        unset($actions['view']);
+        unset($actions['create']);
+        unset($actions['update']);
+        unset($actions['delete']);
+
+        return $actions;
+    }
     public function json($status = true, $data = [], $message = "", $code = 200): array
     {
         Yii::$app->response->statusCode = $code;
@@ -23,6 +35,7 @@ class BaseController extends ActiveController
     {
         $page = (int) Yii::$app->request->get('page', 1);
         $limit = (int) Yii::$app->request->get('limit', $defaultLimit);
+        $maxLimit = 100;
 
         if ($page < 1) {
             $page = 1;
@@ -30,6 +43,9 @@ class BaseController extends ActiveController
 
         if ($limit < 1) {
             $limit = $defaultLimit;
+        }
+        if ($limit > $maxLimit) {
+            $limit = $maxLimit;
         }
 
         $total = (clone $query)->count();

@@ -6,34 +6,18 @@ use app\models\Categories;
 use app\models\forms\Category\CreateCategoryForm;
 use app\models\forms\Category\UpdateCategoryForm;
 use app\models\response\Category\CategoryResponse;
+use app\models\search\CategorySearch;
 use Yii;
 
 class CategoryController extends BaseController
 {
     public $modelClass = 'app\models\Categories';
 
-    /**
-     * @inheritDoc
-     */
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = CategoryResponse::find()
-            ->where(['parent_id' => null])
-            ->with(['children']);
-        $data = $this->paginate($query);
+        $searchModel = new CategorySearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Categories retrieved successfully');
     }
 
@@ -59,9 +43,7 @@ class CategoryController extends BaseController
         }
 
         $model = new Categories();
-        $model->name = $form->name;
-        $model->status = $form->status;
-        $model->parent_id = $form->parent_id;
+        $model->setAttributes($form->attributes, false);
 
         try {
             if ($model->save()) {
@@ -95,12 +77,7 @@ class CategoryController extends BaseController
         if (!$form->validate()) {
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
-
-        $model->name = $form->name;
-        $model->slug = $form->slug;
-        $model->status = $form->status;
-        $model->parent_id = $form->parent_id;
-
+        $model->setAttributes($form->attributes, false);
         try {
             if ($model->save()) {
                 return $this->json(true, $model, 'Category updated successfully');

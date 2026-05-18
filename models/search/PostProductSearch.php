@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\PostProducts;
+use app\models\response\PostProduct\PostProductResponse;
 
 /**
  * PostProductSearch represents the model behind the search form of `app\models\PostProducts`.
@@ -17,7 +18,7 @@ class PostProductSearch extends PostProducts
     public function rules()
     {
         return [
-            [['post_id', 'product_id', 'sort_order', 'created_at', 'updated_at', 'id'], 'integer'],
+            [['post_id', 'product_id', 'sort_order', 'created_at', 'updated_at'], 'integer'],
             [['note'], 'safe'],
         ];
     }
@@ -39,9 +40,9 @@ class PostProductSearch extends PostProducts
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = PostProducts::find();
+        $query = PostProductResponse::find();
 
         // add conditions that should always apply here
 
@@ -64,7 +65,6 @@ class PostProductSearch extends PostProducts
             'sort_order' => $this->sort_order,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'id' => $this->id,
         ]);
 
         $query->andFilterWhere(['like', 'note', $this->note]);

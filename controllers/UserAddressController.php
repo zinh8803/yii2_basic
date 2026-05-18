@@ -12,25 +12,7 @@ use yii\filters\VerbFilter;
 
 class UserAddressController extends BaseController
 {
-    public $modelClass = 'app\\models\\UserAddresses';
-
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
-    {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
-    }
+    public $modelClass = 'app\models\UserAddresses';
 
     public function actionIndex()
     {
@@ -51,12 +33,7 @@ class UserAddressController extends BaseController
 
         if ($form->validate()) {
             $model = new UserAddresses();
-            $model->user_id = $form->user_id;
-            $model->city = $form->city;
-            $model->ward = $form->ward;
-            $model->detail_address = $form->detail_address;
-            $model->phone_number = $form->phone_number;
-            $model->name_address = $form->name_address;
+            $model->setAttributes($form->attributes, false);
             try {
                 if ($model->save()) {
                     return $this->json(true, $model, 'User address created successfully', 201);
@@ -80,12 +57,7 @@ class UserAddressController extends BaseController
         }
         $form->load($data, '');
         if ($form->validate()) {
-            $model->user_id = $form->user_id;
-            $model->city = $form->city;
-            $model->ward = $form->ward;
-            $model->detail_address = $form->detail_address;
-            $model->phone_number = $form->phone_number;
-            $model->name_address = $form->name_address;
+            $model->setAttributes($form->attributes, false);
             try {
                 if ($model->save()) {
                     return $this->json(true, $model, 'User address updated successfully');

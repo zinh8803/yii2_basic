@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Coupons;
+use app\models\response\Coupon\CouponResponse;
 
 /**
  * CouponSearch represents the model behind the search form of `app\models\Coupons`.
@@ -41,9 +42,9 @@ class CouponSearch extends Coupons
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = Coupons::find();
+        $query = CouponResponse::find()->active();
 
         // add conditions that should always apply here
 
@@ -75,8 +76,15 @@ class CouponSearch extends Coupons
         ]);
 
         $query->andFilterWhere(['like', 'code', $this->code])
-            ->andFilterWhere(['like', 'type', $this->type])
-            ->andFilterWhere(['like', 'keyword', $this->keyword]);
+            ->andFilterWhere(['like', 'type', $this->type]);
+
+        if ($this->keyword) {
+            $query->andWhere([
+                'or',
+                ['like', 'code', $this->keyword],
+                ['like', 'type', $this->keyword],
+            ]);
+        }
 
         return $dataProvider;
     }

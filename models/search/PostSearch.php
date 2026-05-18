@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Posts;
+use app\models\response\Post\PostResponse;
 
 /**
  * PostSearch represents the model behind the search form of `app\models\Posts`.
@@ -40,9 +41,9 @@ class PostSearch extends Posts
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = Posts::find();
+        $query = PostResponse::find()->with(['primaryResource.file']);
 
         // add conditions that should always apply here
 
@@ -67,15 +68,24 @@ class PostSearch extends Posts
             'updated_at' => $this->updated_at,
         ]);
 
-        $query->andFilterWhere(['like', 'title', $this->title])
+        $query->andFilterWhere(['status' => $this->status])
+            ->andFilterWhere(['post_style' => $this->post_style])
+            ->andFilterWhere(['like', 'title', $this->title])
             ->andFilterWhere(['like', 'slug', $this->slug])
             ->andFilterWhere(['like', 'excerpt', $this->excerpt])
             ->andFilterWhere(['like', 'content', $this->content])
-            ->andFilterWhere(['like', 'status', $this->status])
-            ->andFilterWhere(['like', 'post_style', $this->post_style])
             ->andFilterWhere(['like', 'meta_title', $this->meta_title])
-            ->andFilterWhere(['like', 'meta_description', $this->meta_description])
-            ->andFilterWhere(['like', 'keyword', $this->keyword]);
+            ->andFilterWhere(['like', 'meta_description', $this->meta_description]);
+
+        if ($this->keyword) {
+            $query->andWhere([
+                'or',
+                ['like', 'title', $this->keyword],
+                ['like', 'slug', $this->keyword],
+                ['like', 'excerpt', $this->keyword],
+                ['like', 'content', $this->keyword],
+            ]);
+        }
 
         return $dataProvider;
     }

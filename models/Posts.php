@@ -39,6 +39,11 @@ class Posts extends \yii\db\ActiveRecord
         return 'posts';
     }
 
+    public static function find()
+    {
+        return new query\PostQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -110,6 +115,16 @@ class Posts extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Resources::class, ['resource_id' => 'id'])
             ->andWhere(['resource_type' => 'post']);
+    }
+
+    public function getPrimaryResource()
+    {
+        return $this->hasOne(Resources::class, ['resource_id' => 'id'])
+            ->andWhere([
+                'resource_type' => 'post',
+                'type' => 'image',
+                'is_primary' => 1,
+            ]);
     }
 
     /**

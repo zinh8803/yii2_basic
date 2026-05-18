@@ -2,6 +2,8 @@
 
 namespace app\controllers;
 
+use app\models\CartItems;
+use app\models\Carts;
 use app\models\forms\Order\CreateOrderForm;
 use app\models\Coupons;
 use app\models\CouponUsages;
@@ -12,29 +14,19 @@ use app\models\Payments;
 use app\models\Products;
 use app\models\ProductVariants;
 use app\models\response\Order\OrderResponse;
+use app\models\search\OrderSearch;
 use Yii;
+use yii\web\NotFoundHttpException;
 
 class OrderController extends BaseController
 {
     public $modelClass = 'app\models\Orders';
 
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-
     public function actionIndex()
     {
-        $query = OrderResponse::find();
-        $data = $this->paginate($query);
+        $searchModel = new OrderSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
         return $this->json(true, $data, 'Orders retrieved successfully');
     }
 
@@ -89,11 +81,14 @@ class OrderController extends BaseController
 
                 $coupon = $couponResult['coupon'];
                 $discountAmount = $couponResult['discount'];
-                $order->discount_amount = $discountAmount;
-                $order->is_discounted = $coupon !== null ? 1 : 0;
-
-                $order->total = $total + (float) $order->shipping_fee - (float) $order->discount_amount;
-                $order->save(false, ['total']);
+                $order->setAttributes([
+                    'discount_amount' => $discountAmount,
+                    'is_discounted' => $coupon !== null ? 1 : 0,
+                    'total' => $total + (float) $order->shipping_fee - $discountAmount,
+                ], false);
+                if (!$order->save(false, ['total', 'discount_amount', 'is_discounted'])) {
+                    throw new \RuntimeException('Failed to update order total.');
+                }
 
                 if ($coupon !== null) {
                     if (!$this->recordCouponUsage($coupon, $order, $discountAmount, $form)) {
@@ -103,7 +98,7 @@ class OrderController extends BaseController
                 }
 
                 $this->createOrUpdatePayment($order, $form);
-
+                $this->clearCartUser((int) $order->user_id);
                 $transaction->commit();
                 $responseModel = $this->findModelWithItems($order->id);
                 return $this->json(true, $responseModel, 'Order created successfully', 201);
@@ -115,7 +110,7 @@ class OrderController extends BaseController
         } catch (\Throwable $exception) {
             $transaction->rollBack();
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            return $this->json(false, null, $exception->getMessage(), 500);
         }
     }
 
@@ -142,8 +137,10 @@ class OrderController extends BaseController
         if (!$form->validate()) {
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
-        $model->status = $form->status;
-        $model->payment_status = $form->payment_status;
+        $model->setAttributes([
+            'status' => $form->status,
+            'payment_status' => $form->payment_status,
+        ], false);
         try {
             if ($model->save()) {
                 return $this->json(true, $model, 'Order status updated successfully');
@@ -163,7 +160,7 @@ class OrderController extends BaseController
             return $model;
         }
 
-        return $this->json(false, null, 'Order not found', 404);
+        throw new NotFoundHttpException('Order not found');
     }
 
     protected function findModelWithItems($id)
@@ -177,55 +174,109 @@ class OrderController extends BaseController
             return $model;
         }
 
-        return $this->json(false, null, 'Order not found', 404);
+        throw new NotFoundHttpException('Order not found');
     }
 
     private function createOrderItems(Orders $order, CreateOrderForm $form, array $items)
     {
-        $total = 0;
-
+        $normalizedItems = [];
         foreach ($items as $item) {
-            if ($item['quantity'] < 1) {
+            $quantity = (int) $item['quantity'];
+            if ($quantity < 1) {
                 continue;
             }
 
-            $product = Products::findOne(['id' => $item['product_id']]);
-            $variant = ProductVariants::findOne(['id' => $item['variant_id']]);
+            $key = (int) $item['product_id'] . ':' . (int) $item['variant_id'];
+            if (!isset($normalizedItems[$key])) {
+                $normalizedItems[$key] = [
+                    'product_id' => (int) $item['product_id'],
+                    'variant_id' => (int) $item['variant_id'],
+                    'quantity' => 0,
+                ];
+            }
+            $normalizedItems[$key]['quantity'] += $quantity;
+        }
+
+        if (empty($normalizedItems)) {
+            $form->addError('item_product_id', 'Order item is required.');
+            return false;
+        }
+
+        $productIds = array_values(array_unique(array_column($normalizedItems, 'product_id')));
+        $variantIds = array_values(array_unique(array_column($normalizedItems, 'variant_id')));
+
+        $products = Products::find()
+            ->where(['id' => $productIds])
+            ->indexBy('id')
+            ->all();
+        $variants = ProductVariants::find()
+            ->where(['id' => $variantIds])
+            ->indexBy('id')
+            ->all();
+
+        $total = 0;
+        $rows = [];
+
+        foreach ($normalizedItems as $item) {
+            $product = $products[$item['product_id']] ?? null;
+            $variant = $variants[$item['variant_id']] ?? null;
 
             if ($product === null || $variant === null || (int) $variant->product_id !== (int) $product->id) {
                 $form->addError('item_product_id', 'Invalid product or variant.');
                 return false;
             }
 
-            if ($variant->stock === null || (int) $variant->stock < (int) $item['quantity']) {
+            if ((int) $variant->stock < (int) $item['quantity']) {
                 $form->addError('item_product_id', 'Insufficient stock for selected variant.');
                 return false;
             }
 
             $price = $variant->sale_price !== null ? $variant->sale_price : $variant->price;
 
-            $orderItem = new OrderItems();
-            $orderItem->order_id = $order->id;
-            $orderItem->product_id = $product->id;
-            $orderItem->variant_id = $variant->id;
-            $orderItem->product_name = $product->name;
-            $orderItem->variant_name = $variant->name;
-            $orderItem->sku = $variant->sku;
-            $orderItem->quantity = $item['quantity'];
-            $orderItem->price = $price;
-            if (!$orderItem->save()) {
-                $form->addError('item_product_id', 'Failed to save order item.');
+            $updated = ProductVariants::updateAllCounters(
+                ['stock' => -(int) $item['quantity']],
+                [
+                    'and',
+                    ['id' => $variant->id],
+                    ['>=', 'stock', (int) $item['quantity']],
+                ]
+            );
+
+            if ($updated < 1) {
+                $form->addError('item_product_id', 'Insufficient stock for selected variant.');
                 return false;
             }
 
-            $variant->stock = (int) $variant->stock - (int) $item['quantity'];
-            if (!$variant->save(false, ['stock'])) {
-                $form->addError('item_product_id', 'Failed to update variant stock.');
-                return false;
-            }
+            $rows[] = [
+                $order->id,
+                $product->id,
+                $variant->id,
+                $product->name,
+                $variant->name,
+                null,
+                $variant->sku,
+                (int) $item['quantity'],
+                $price,
+            ];
 
-            $total += $price * $item['quantity'];
+            $total += $price * (int) $item['quantity'];
         }
+
+        Yii::$app->db->createCommand()->batchInsert(
+            OrderItems::tableName(),
+            [
+                'order_id',
+                'product_id',
+                'variant_id',
+                'product_name',
+                'variant_name',
+                'image_url',
+                'sku',
+                'quantity',
+                'price',
+            ],
+            $rows
+        )->execute();
 
         return $total;
     }
@@ -286,12 +337,17 @@ class OrderController extends BaseController
             $payment->idempotency_key = strtoupper(Yii::$app->security->generateRandomString(16));
             $payment->created_at = time();
         }
+        $payment->updated_at = time();
 
-        $payment->amount = $order->total;
-        $payment->payment_method = $form->payment_method;
-        $payment->status = $form->payment_status;
-        $payment->payment_status = $form->payment_status;
-        $payment->save();
+        $payment->setAttributes([
+            'amount' => $order->total,
+            'payment_method' => $form->payment_method,
+            'status' => $form->payment_status,
+            'payment_status' => $form->payment_status,
+        ], false);
+        if (!$payment->save()) {
+            throw new \RuntimeException('Failed to save payment: ' . json_encode($payment->errors));
+        }
     }
 
     private function buildOrderFromForm(CreateOrderForm $form)
@@ -303,19 +359,22 @@ class OrderController extends BaseController
 
     private function applyFormToOrder(Orders $order, CreateOrderForm $form)
     {
-        $order->user_id = $form->user_id;
-        $order->email = $form->email;
-        $order->receiver_name = $form->receiver_name;
-        $order->receiver_phone = $form->receiver_phone;
-        $order->receiver_address = $form->receiver_address;
-        $order->note = $form->note;
-        $order->is_discounted = $form->is_discounted;
-        $order->shipping_fee = $form->shipping_fee;
-        $order->discount_amount = $form->discount_amount;
-        $order->payment_method = $form->payment_method;
-        $order->payment_status = $form->payment_status;
-        $order->status = $form->status;
-
+        $order->setAttributes(
+            [
+                'user_id' => $form->user_id,
+                'email' => $form->email,
+                'receiver_name' => $form->receiver_name,
+                'receiver_phone' => $form->receiver_phone,
+                'receiver_address' => $form->receiver_address,
+                'note' => $form->note,
+                'status' => $form->status,
+                'payment_method' => $form->payment_method,
+                'payment_status' => $form->payment_status,
+                'shipping_fee' => $form->shipping_fee ?? 0,
+            ]
+            ,
+            false
+        );
         return $order;
     }
 
@@ -354,20 +413,20 @@ class OrderController extends BaseController
         }
 
         $now = time();
-        $startsAt = is_numeric($coupon->starts_at) ? (int) $coupon->starts_at : strtotime($coupon->starts_at);
-        $expiresAt = is_numeric($coupon->expires_at) ? (int) $coupon->expires_at : strtotime($coupon->expires_at);
+        $startsAt = $this->parseCouponTimestamp($coupon->starts_at);
+        $expiresAt = $this->parseCouponTimestamp($coupon->expires_at);
 
-        if ($startsAt !== false && $now < $startsAt) {
+        if ($startsAt !== null && $now < $startsAt) {
             $form->addError('coupon_code', 'Coupon is not active yet.');
             return null;
         }
 
-        if ($expiresAt !== false && $now > $expiresAt) {
+        if ($expiresAt !== null && $now > $expiresAt) {
             $form->addError('coupon_code', 'Coupon has expired.');
             return null;
         }
 
-        if ($coupon->max_usage !== null && $coupon->used_count >= $coupon->max_usage) {
+        if ($coupon->used_count >= $coupon->max_usage) {
             $form->addError('coupon_code', 'Coupon usage limit reached.');
             return null;
         }
@@ -378,6 +437,20 @@ class OrderController extends BaseController
         }
 
         return $coupon;
+    }
+
+    private function parseCouponTimestamp($value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && ctype_digit($value)) {
+            return (int) $value;
+        }
+
+        $timestamp = strtotime((string) $value);
+        return $timestamp === false ? null : $timestamp;
     }
 
     private function calculateCouponDiscount(Coupons $coupon, float $subTotal): float
@@ -396,25 +469,50 @@ class OrderController extends BaseController
         return max(0, min($discount, $subTotal));
     }
 
+    private function clearCartUser(int $userId)
+    {
+        $cart = Carts::findOne(['user_id' => $userId]);
+        if ($cart === null) {
+            return;
+        }
+        $cartId = $cart->id;
+        CartItems::deleteAll([
+            'cart_id' => $cartId,
+        ]);
+        // Carts::find()
+        //     ->where(['user_id' => $userId])
+        //     ->updateAll(['total' => 0]);
+        Carts::updateAll(['total' => 0], ['user_id' => $userId]);
+    }
+
     private function recordCouponUsage(Coupons $coupon, Orders $order, float $discountAmount, CreateOrderForm $form): bool
     {
         $usage = new CouponUsages();
-        $usage->coupon_id = $coupon->id;
-        $usage->user_id = $order->user_id;
-        $usage->order_id = $order->id;
-        $usage->used_at = time();
-        $usage->discount_applied = $discountAmount;
-        $usage->created_at = time();
-        $usage->updated_at = time();
+        $now = time();
+        $usage->setAttributes([
+            'coupon_id' => $coupon->id,
+            'user_id' => $order->user_id,
+            'order_id' => $order->id,
+            'used_at' => $now,
+            'discount_applied' => $discountAmount,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], false);
 
         if (!$usage->save()) {
             $form->addError('coupon_code', 'Failed to save coupon usage.');
             return false;
         }
 
-        $coupon->used_count = (int) $coupon->used_count + 1;
-        if (!$coupon->save(false, ['used_count'])) {
-            $form->addError('coupon_code', 'Failed to update coupon usage count.');
+        $condition = [
+            'and',
+            ['id' => $coupon->id],
+            ['<', 'used_count', (int) $coupon->max_usage],
+        ];
+
+        $updated = Coupons::updateAllCounters(['used_count' => 1], $condition);
+        if ($updated < 1) {
+            $form->addError('coupon_code', 'Coupon usage limit reached.');
             return false;
         }
 

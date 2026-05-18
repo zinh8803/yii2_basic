@@ -30,6 +30,11 @@ class Brands extends \yii\db\ActiveRecord
         return 'brands';
     }
 
+    public static function find()
+    {
+        return new query\BrandQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */

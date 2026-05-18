@@ -60,6 +60,12 @@ $config = [
                     'controller' => ['product', 'post-product', 'brand', 'category', 'product-attribute', 'product-variant', 'coupon', 'order', 'cart', 'user-address', 'post'],
                     //dùng nếu route ko có "s" ở cuối (ví dụ: api/product thay vì api/products)
                     'pluralize' => false,
+                    'extraPatterns' => [
+                        'POST add-items' => 'add-items',
+                        'POST remove-items' => 'remove-items',
+                        //  'POST remove-items' => 'remove-items',
+                        'POST clear-cart' => 'clear-cart',
+                    ],
                 ],
                 // [
                 //     'class' => 'yii\rest\UrlRule',

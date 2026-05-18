@@ -9,12 +9,12 @@ class CreateTagForm extends Model
     public $name;
     public $slug;
     public $type;
-    public $decription;
+    public $description;
 
     public function rules()
     {
         return [
-            [['name', 'slug', 'type', 'decription'], 'string', 'max' => 255],
+            [['name', 'slug', 'type', 'description'], 'string', 'max' => 255],
         ];
     }
 }

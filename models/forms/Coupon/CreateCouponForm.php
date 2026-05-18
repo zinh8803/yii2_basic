@@ -29,6 +29,7 @@ class CreateCouponForm extends Model
             [['code'], 'string', 'max' => 50],
             [['type'], 'string', 'max' => 20],
             [['starts_at', 'expires_at'], 'datetime', 'format' => 'php:Y-m-d H:i:s'],
+            [['expires_at'], 'compare', 'compareAttribute' => 'starts_at', 'operator' => '>'],
             [['code'], 'unique', 'targetClass' => Coupons::class, 'targetAttribute' => 'code'],
         ];
     }

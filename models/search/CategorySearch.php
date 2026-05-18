@@ -5,6 +5,7 @@ namespace app\models\search;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use app\models\Categories;
+use app\models\response\Category\CategoryResponse;
 
 /**
  * CategorySearch represents the model behind the search form of `app\models\Categories`.
@@ -42,9 +43,12 @@ class CategorySearch extends Categories
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = null)
+    public function search($params, $formName = '')
     {
-        $query = Categories::find();
+        $query = CategoryResponse::find()
+            ->roots()
+            ->active()
+            ->with(['children']);
 
         // add conditions that should always apply here
 

@@ -34,6 +34,11 @@ class ProductAttributes extends \yii\db\ActiveRecord
         return 'product_attributes';
     }
 
+    public static function find()
+    {
+        return new query\ProductAttributeQuery(get_called_class());
+    }
+
     /**
      * {@inheritdoc}
      */
