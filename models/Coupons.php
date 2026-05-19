@@ -65,13 +65,13 @@ class Coupons extends \yii\db\ActiveRecord
         ];
     }
 
-    public function afterFind()
-    {
-        parent::afterFind();
+    // public function afterFind()
+    // {
+    //     parent::afterFind();
 
-        $this->starts_at = date('Y-m-d\TH:i', $this->starts_at);
-        $this->expires_at = date('Y-m-d\TH:i', $this->expires_at);
-    }
+    //     $this->starts_at = date('Y-m-d\TH:i', $this->starts_at);
+    //     $this->expires_at = date('Y-m-d\TH:i', $this->expires_at);
+    // }
 
     /**
      * {@inheritdoc}

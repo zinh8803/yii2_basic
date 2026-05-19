@@ -26,7 +26,8 @@ class ProductAttributeSearch extends ProductAttributes
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = ProductAttributeResponse::find();
+        $query = ProductAttributeResponse::find()
+            ->with(['attributeValues']);
         $dataProvider = new ActiveDataProvider(['query' => $query]);
 
         $this->load($params, $formName);

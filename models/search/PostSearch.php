@@ -43,8 +43,11 @@ class PostSearch extends Posts
      */
     public function search($params, $formName = '')
     {
-        $query = PostResponse::find()->with(['primaryResource.file']);
-
+        $query = PostResponse::find()->with([
+            'taggables.tag',
+            'primaryResource.file',
+            'postProducts.product.primaryResource.file'
+        ]);
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([

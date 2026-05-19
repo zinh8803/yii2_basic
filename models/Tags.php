@@ -46,7 +46,7 @@ class Tags extends \yii\db\ActiveRecord
             [['name', 'slug', 'type', 'description'], 'string', 'max' => 255],
             [['name'], 'unique'],
             [['slug'], 'unique'],
-            [['description'], 'unique'],
+          //  [['description'], 'unique'],
         ];
     }
 

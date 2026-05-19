@@ -24,6 +24,7 @@ class OrderController extends BaseController
 
     public function actionIndex()
     {
+        Yii::info($this->request->queryParams, 'debug');
         $searchModel = new OrderSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         $data = $this->paginate($dataProvider->query);
@@ -33,7 +34,7 @@ class OrderController extends BaseController
     public function actionView($id)
     {
         $model = OrderResponse::find()
-            ->with(['orderItems'])
+            ->with(['orderItems', 'payments'])
             ->where(['id' => $id])
             ->one();
 
@@ -141,6 +142,7 @@ class OrderController extends BaseController
             'status' => $form->status,
             'payment_status' => $form->payment_status,
         ], false);
+        Payments::updateAll(['status' => $form->payment_status, 'payment_status' => $form->payment_status], ['order_id' => $model->id]);
         try {
             if ($model->save()) {
                 return $this->json(true, $model, 'Order status updated successfully');

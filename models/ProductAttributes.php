@@ -93,7 +93,7 @@ class ProductAttributes extends \yii\db\ActiveRecord
      */
     public function getAttributeValues()
     {
-        return $this->hasMany(AttributeValues::class, ['attribute_id' => 'id']);
+        return $this->hasMany(AttributeValues::class, ['attribute_id' => 'id'])->orderBy(['sort_order' => SORT_ASC]);
     }
 
     /**

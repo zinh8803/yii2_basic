@@ -26,8 +26,13 @@ class ProductResponse extends Products
             },
             'description',
             'status',
-            'created_at',
-            'updated_at',
+            'created_at' => function () {
+                return date('Y-m-d H:i:s', $this->created_at);
+            },
+
+            'updated_at' => function () {
+                return date('Y-m-d H:i:s', $this->updated_at);
+            },
         ];
     }
     public function extraFields()

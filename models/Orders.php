@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\search\OrderSearch;
 use Yii;
 use yii\behaviors\TimestampBehavior;
 
@@ -85,13 +86,14 @@ class Orders extends \yii\db\ActiveRecord
     public function beforeValidate()
     {
         if ($this->isNewRecord) {
+            if (!($this instanceof OrderSearch)) {
+                if (!$this->order_code) {
+                    $this->order_code = $this->generateOrderCode();
+                }
 
-            if (!$this->order_code) {
-                $this->order_code = $this->generateOrderCode();
-            }
-
-            if (!$this->stacking_id) {
-                $this->stacking_id = $this->generateTrackingId();
+                if (!$this->stacking_id) {
+                    $this->stacking_id = $this->generateTrackingId();
+                }
             }
         }
 
@@ -169,6 +171,10 @@ class Orders extends \yii\db\ActiveRecord
     public function getUser()
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
+    }
+    public function getPayments()
+    {
+        return $this->hasMany(Payments::class, ['order_id' => 'id']);
     }
 
 }

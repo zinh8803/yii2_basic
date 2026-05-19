@@ -21,6 +21,8 @@ class UpdatePostForm extends Model
     public $meta_title;
     public $meta_description;
     public $published_at;
+    public $tag_ids;
+    public $products;
     public function rules()
     {
         return [
@@ -29,6 +31,8 @@ class UpdatePostForm extends Model
             [['excerpt', 'content'], 'string'],
             [['title', 'slug', 'meta_title', 'meta_description'], 'string', 'max' => 255],
             [['status', 'post_style'], 'string', 'max' => 50],
+            [['tag_ids'], 'each', 'rule' => ['integer']],
+            [['products'], 'each', 'rule' => ['integer']],
             [
                 ['imageFile'],
                 'file',

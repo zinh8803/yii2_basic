@@ -17,11 +17,20 @@ class CouponResponse extends Coupons
             'max_discount',
             'max_usage',
             'used_count',
-            'starts_at',
-            'expires_at',
+            'starts_at' => function () {
+                return date('Y-m-d H:i:s', $this->starts_at);
+            },
+            'expires_at' => function () {
+                return date('Y-m-d H:i:s', $this->expires_at);
+            },
             'is_active',
-            'created_at',
-            'updated_at',
+            'created_at' => function () {
+                return date('Y-m-d H:i:s', $this->created_at);
+            },
+
+            'updated_at' => function () {
+                return date('Y-m-d H:i:s', $this->updated_at);
+            },
         ];
     }
 }

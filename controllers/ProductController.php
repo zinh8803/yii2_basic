@@ -30,7 +30,13 @@ class ProductController extends BaseController
     public function actionView($id)
     {
         $model = ProductResponse::find()
-            ->with(['primaryResource.file'])
+            ->with([
+                'category',
+                'productVariants',
+                'productAttributes',
+                'productAttributes.attributeValues',
+                'primaryResource.file'
+            ])
             ->where(['id' => $id])
             ->one();
         if (!$model) {
@@ -69,6 +75,15 @@ class ProductController extends BaseController
 
         return $this->json(false, $form->errors, 'Failed to create product', 400);
     }
+
+    public function actionByCategory($categoryId)
+    {
+        $searchModel = new ProductSearch();
+        $dataProvider = $searchModel->searchByCategory($categoryId, $this->request->queryParams);
+        $data = $this->paginate($dataProvider->query);
+        return $this->json(true, $data, "Get list product by category successfully");
+    }
+
     public function actionUpdate($id)
     {
         $product = $this->findModel($id);

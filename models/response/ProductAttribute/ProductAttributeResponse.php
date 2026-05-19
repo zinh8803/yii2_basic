@@ -14,11 +14,16 @@ class ProductAttributeResponse extends ProductAttributes
             'name',
             'type',
             'slug',
-            'attributeValues',
+            'attribute_id',
             'is_variant',
             'sort_order',
-            'created_at',
-            'updated_at',
+            'created_at' => function () {
+                return date('Y-m-d H:i:s', $this->created_at);
+            },
+
+            'updated_at' => function () {
+                return date('Y-m-d H:i:s', $this->updated_at);
+            },
         ];
     }
     public function extraFields()

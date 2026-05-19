@@ -25,7 +25,8 @@ class AttributeValueSearch extends AttributeValues
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = AttributeValues::find();
+        $query = AttributeValues::find()
+            ->orderBy(['sort_order' => SORT_ASC]);
         $dataProvider = new ActiveDataProvider(['query' => $query]);
 
         $this->load($params, $formName);

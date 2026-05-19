@@ -5,8 +5,11 @@ namespace app\controllers;
 use app\models\Files;
 use app\models\forms\Post\CreatePostForm;
 use app\models\forms\Post\UpdatePostForm;
+use app\models\forms\Post\UpdatePostStatusForm;
 use app\models\Posts;
+use app\models\PostProducts;
 use app\models\Resources;
+use app\models\Taggables;
 use app\models\response\Post\PostResponse;
 use app\models\search\PostSearch;
 use Yii;
@@ -29,7 +32,11 @@ class PostController extends BaseController
     public function actionView($id)
     {
         $model = PostResponse::find()
-            ->with(['primaryResource.file'])
+            ->with([
+                'taggables.tag',
+                'primaryResource.file',
+                'postProducts.product.primaryResource.file',
+            ])
             ->where(['id' => $id])
             ->one();
         if (!$model) {
@@ -60,6 +67,9 @@ class PostController extends BaseController
                     $this->addModelErrors($form, $post);
                     throw new \RuntimeException('Failed to save post.');
                 }
+
+                $this->syncPostProducts($post, $this->normalizeIdArray($form->products));
+                $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
 
                 if ($form->imageFile instanceof UploadedFile) {
                     $this->attachImage($post, $form->imageFile, $form);
@@ -120,6 +130,13 @@ class PostController extends BaseController
                 throw new \RuntimeException('Failed to save post.');
             }
 
+            if ($form->products !== null) {
+                $this->syncPostProducts($post, $this->normalizeIdArray($form->products));
+            }
+            if ($form->tag_ids !== null) {
+                $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
+            }
+
             if ($form->imageFile instanceof UploadedFile) {
                 $this->markPostImagesNonPrimary($post);
                 $this->attachImage($post, $form->imageFile, $form, true);
@@ -134,6 +151,26 @@ class PostController extends BaseController
             Yii::error($e->getMessage(), __METHOD__);
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
+    }
+
+    public function actionUpdateStatus($id)
+    {
+        $form = new UpdatePostStatusForm();
+        $post = $this->findModel($id);
+        $form->id = $post->id;
+        $form->status = Yii::$app->request->post('status');
+
+        if (!in_array($form->status, ['draft', 'published', 'archived'])) {
+            return $this->json(false, null, 'Invalid status value', 422);
+        }
+
+        $post->status = $form->status;
+        $post->published_at = $form->status === 'published' ? time() : null;
+        if ($post->save()) {
+            return $this->json(true, $post, 'Post status updated successfully');
+        }
+
+        return $this->json(false, $post->errors, 'Failed to update post status', 422);
     }
 
     public function actionDelete($id)
@@ -335,6 +372,80 @@ class PostController extends BaseController
             }
             if ($fullPath !== null && is_file($fullPath)) {
                 @unlink($fullPath);
+            }
+        }
+    }
+
+    private function normalizeIdArray($value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        if (is_array($value)) {
+            $items = $value;
+        } elseif (is_string($value)) {
+            $items = preg_split('/\s*,\s*/', $value, -1, PREG_SPLIT_NO_EMPTY);
+        } else {
+            $items = [$value];
+        }
+
+        $ids = [];
+        foreach ($items as $item) {
+            $id = (int) $item;
+            if ($id > 0) {
+                $ids[$id] = true;
+            }
+        }
+
+        return array_keys($ids);
+    }
+
+    private function syncPostProducts(Posts $post, array $productIds): void
+    {
+        PostProducts::deleteAll(['post_id' => $post->id]);
+        if (empty($productIds)) {
+            return;
+        }
+
+        $sortOrder = 0;
+        foreach ($productIds as $productId) {
+            $postProduct = new PostProducts();
+            $postProduct->setAttributes([
+                'post_id' => $post->id,
+                'product_id' => (int) $productId,
+                'sort_order' => $sortOrder,
+            ], false);
+
+            if (!$postProduct->save()) {
+                throw new \RuntimeException('Failed to save post product: ' . json_encode($postProduct->errors));
+            }
+
+            $sortOrder++;
+        }
+    }
+
+    private function syncPostTags(Posts $post, array $tagIds): void
+    {
+        Taggables::deleteAll([
+            'post_id' => $post->id,
+            'type' => 'post',
+        ]);
+
+        if (empty($tagIds)) {
+            return;
+        }
+
+        foreach ($tagIds as $tagId) {
+            $taggable = new Taggables();
+            $taggable->setAttributes([
+                'tag_id' => (int) $tagId,
+                'post_id' => $post->id,
+                'type' => 'post',
+            ], false);
+
+            if (!$taggable->save()) {
+                throw new \RuntimeException('Failed to save taggable: ' . json_encode($taggable->errors));
             }
         }
     }

@@ -45,7 +45,7 @@ $config = [
             'targets' => [
                 [
                     'class' => \yii\log\FileTarget::class,
-                    'levels' => ['error', 'warning'],
+                    'levels' => ['error', 'warning', 'info'],
                 ],
             ],
         ],
@@ -57,7 +57,7 @@ $config = [
             'rules' => [
                 [
                     'class' => 'yii\rest\UrlRule',
-                    'controller' => ['product', 'post-product', 'brand', 'category', 'product-attribute', 'product-variant', 'coupon', 'order', 'cart', 'user-address', 'post'],
+                    'controller' => ['product', 'post-product', 'brand', 'category', 'product-attribute', 'product-variant', 'coupon', 'order', 'cart', 'user-address', 'post', 'tag'],
                     //dùng nếu route ko có "s" ở cuối (ví dụ: api/product thay vì api/products)
                     'pluralize' => false,
                     'extraPatterns' => [
@@ -65,6 +65,7 @@ $config = [
                         'POST remove-items' => 'remove-items',
                         //  'POST remove-items' => 'remove-items',
                         'POST clear-cart' => 'clear-cart',
+
                     ],
                 ],
                 // [
