@@ -33,6 +33,4 @@ class UserController extends BaseController
 
         return $this->json(false, null, 'Sai tài khoản hoặc mật khẩu', 401);
     }
-
-
 }

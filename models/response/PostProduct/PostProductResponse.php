@@ -22,4 +22,3 @@ class PostProductResponse extends PostProducts
         ];
     }
 }
-

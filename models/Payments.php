@@ -25,8 +25,6 @@ use Yii;
  */
 class Payments extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -77,5 +75,4 @@ class Payments extends \yii\db\ActiveRecord
             'updated_at' => 'Updated At',
         ];
     }
-
 }

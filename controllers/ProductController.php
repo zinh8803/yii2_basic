@@ -23,7 +23,7 @@ class ProductController extends BaseController
         $searchModel = new ProductSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, "Get list product successfully");
+        return $this->json(true, $data, 'Get list product successfully');
     }
 
 
@@ -81,7 +81,7 @@ class ProductController extends BaseController
         $searchModel = new ProductSearch();
         $dataProvider = $searchModel->searchByCategory($categoryId, $this->request->queryParams);
         $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, "Get list product by category successfully");
+        return $this->json(true, $data, 'Get list product by category successfully');
     }
 
     public function actionUpdate($id)

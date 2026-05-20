@@ -25,8 +25,6 @@ use Yii;
  */
 class OtpEmails extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -85,5 +83,4 @@ class OtpEmails extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

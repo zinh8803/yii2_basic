@@ -20,7 +20,6 @@ class CalculateController extends BaseController
         $result = (float) $a + (float) $b;
 
         return $this->json(true, ['result' => $result], 'Success');
-
     }
     public function actionDivide()
     {

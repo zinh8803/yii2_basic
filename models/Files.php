@@ -26,8 +26,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Files extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -98,5 +96,4 @@ class Files extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

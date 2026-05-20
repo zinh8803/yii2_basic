@@ -28,8 +28,6 @@ use yii\helpers\Inflector;
  */
 class ProductVariants extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -161,6 +159,4 @@ class ProductVariants extends \yii\db\ActiveRecord
 
         return $sku;
     }
-
-
 }

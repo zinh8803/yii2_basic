@@ -31,8 +31,6 @@ use app\models\Resources;
  */
 class Products extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -213,5 +211,4 @@ class Products extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Reviews::class, ['product_id' => 'id']);
     }
-
 }

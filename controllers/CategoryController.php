@@ -55,7 +55,6 @@ class CategoryController extends BaseController
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
-
     }
 
     public function actionUpdate($id)
@@ -107,5 +106,4 @@ class CategoryController extends BaseController
 
         return $this->json(false, null, 'Failed to delete category', 500);
     }
-
 }

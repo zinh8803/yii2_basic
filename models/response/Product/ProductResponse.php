@@ -1,5 +1,7 @@
 <?php
+
 namespace app\models\response\Product;
+
 use app\models\Products;
 
 class ProductResponse extends Products

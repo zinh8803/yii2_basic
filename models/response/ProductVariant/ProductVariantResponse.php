@@ -1,4 +1,5 @@
 <?php
+
 namespace app\models\response\ProductVariant;
 
 use app\models\ProductVariants;

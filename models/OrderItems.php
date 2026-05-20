@@ -24,8 +24,6 @@ use Yii;
  */
 class OrderItems extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -100,5 +98,4 @@ class OrderItems extends \yii\db\ActiveRecord
     {
         return $this->hasOne(ProductVariants::class, ['id' => 'variant_id']);
     }
-
 }

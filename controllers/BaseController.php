@@ -19,15 +19,15 @@ class BaseController extends ActiveController
 
         return $actions;
     }
-    public function json($status = true, $data = [], $message = "", $code = 200): array
+    public function json($status = true, $data = [], $message = '', $code = 200): array
     {
         Yii::$app->response->statusCode = $code;
 
         return [
-            "status" => $status,
-            "data" => $data,
-            "message" => $message,
-            "code" => $code
+            'status' => $status,
+            'data' => $data,
+            'message' => $message,
+            'code' => $code
         ];
     }
 

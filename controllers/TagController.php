@@ -8,15 +8,25 @@ use app\models\forms\Tag\UpdateTagForm;
 use app\models\response\Tag\TagResponse;
 use app\models\search\TagSearch;
 use Yii;
+use yii\caching\TagDependency;
 
 class TagController extends BaseController
 {
     public $modelClass = 'app\models\Tags';
     public function actionIndex()
     {
-        $searchModel = new TagSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
+        $cacheKey = 'tags_index_' . md5(json_encode($this->request->queryParams));
+        $data = Yii::$app->cache->getOrSet(
+            $cacheKey,
+            function () {
+                $searchModel = new TagSearch();
+                $dataProvider = $searchModel->search($this->request->queryParams);
+                return $this->paginate($dataProvider->query);
+            },
+            60,
+            new TagDependency(['tags' => 'tags_index'])
+        );
+
         return $this->json(true, $data, 'Tags retrieved successfully');
     }
     public function actionView($id)
@@ -37,6 +47,7 @@ class TagController extends BaseController
             $model->setAttributes($form->attributes, false);
             try {
                 if ($model->save()) {
+                    TagDependency::invalidate(Yii::$app->cache, 'tags_index');
                     return $this->json(true, $model, 'Tag created successfully', 201);
                 }
             } catch (\Throwable $exception) {
@@ -54,6 +65,7 @@ class TagController extends BaseController
             return $this->json(false, null, 'Tag not found', 404);
         }
         $form = new UpdateTagForm();
+        $form->id = $model->id;
         $form->load($this->request->bodyParams, '');
         if ($form->validate()) {
             $model->setAttributes($form->attributes, false);
@@ -86,5 +98,4 @@ class TagController extends BaseController
 
         return $this->json(false, null, 'Failed to delete tag', 500);
     }
-
 }

@@ -33,8 +33,6 @@ use Yii;
  */
 class Users extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -206,5 +204,4 @@ class Users extends \yii\db\ActiveRecord
     {
         return $this->hasMany(WarehouseUsers::class, ['user_id' => 'id']);
     }
-
 }

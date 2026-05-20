@@ -29,8 +29,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Posts extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -39,11 +37,10 @@ class Posts extends \yii\db\ActiveRecord
         return 'posts';
     }
 
-    public static function find()
+    public static function find(): query\PostQuery
     {
         return new query\PostQuery(get_called_class());
     }
-
     /**
      * {@inheritdoc}
      */
@@ -104,7 +101,8 @@ class Posts extends \yii\db\ActiveRecord
      */
     public function getPostProducts()
     {
-        return $this->hasMany(PostProducts::class, ['post_id' => 'id']);
+        return $this->hasMany(PostProducts::class, ['post_id' => 'id'])
+            ->orderBy(['sort_order' => SORT_ASC, 'id' => SORT_ASC]);
     }
 
     /**
@@ -134,9 +132,9 @@ class Posts extends \yii\db\ActiveRecord
      */
     public function getTaggables()
     {
-        return $this->hasMany(Taggables::class, ['post_id' => 'id']);
+        return $this->hasMany(Taggables::class, ['post_id' => 'id'])
+            ->andWhere(['type' => 'post']);
     }
-
     /**
      * Gets query for [[User]].
      *
@@ -146,5 +144,4 @@ class Posts extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

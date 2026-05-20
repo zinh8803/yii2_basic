@@ -8,6 +8,7 @@ use yii\behaviors\TimestampBehavior;
 /**
  * This is the model class for table "post_products".
  *
+ * @property int $id
  * @property int $post_id
  * @property int $product_id
  * @property int $sort_order
@@ -20,8 +21,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class PostProducts extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -30,11 +29,10 @@ class PostProducts extends \yii\db\ActiveRecord
         return 'post_products';
     }
 
-    public static function find()
+    public static function find(): query\PostProductQuery
     {
         return new query\PostProductQuery(get_called_class());
     }
-
     /**
      * {@inheritdoc}
      */
@@ -46,6 +44,7 @@ class PostProducts extends \yii\db\ActiveRecord
             [['post_id', 'product_id'], 'required'],
             [['post_id', 'product_id', 'sort_order'], 'integer'],
             [['note'], 'string', 'max' => 255],
+            [['post_id', 'product_id'], 'unique', 'targetAttribute' => ['post_id', 'product_id']],
             [['post_id'], 'exist', 'skipOnError' => true, 'targetClass' => Posts::class, 'targetAttribute' => ['post_id' => 'id']],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
         ];
@@ -64,6 +63,7 @@ class PostProducts extends \yii\db\ActiveRecord
     public function attributeLabels()
     {
         return [
+            'id' => 'ID',
             'post_id' => 'Post ID',
             'product_id' => 'Product ID',
             'sort_order' => 'Sort Order',
@@ -92,5 +92,4 @@ class PostProducts extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Products::class, ['id' => 'product_id']);
     }
-
 }

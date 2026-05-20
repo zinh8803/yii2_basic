@@ -127,7 +127,4 @@ class TestController extends BaseController
         }
         return $this->json(true, $products, 'Products retrieved successfully');
     }
-
-
-
 }

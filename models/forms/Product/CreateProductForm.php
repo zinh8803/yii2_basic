@@ -7,6 +7,7 @@ use app\models\Categories;
 use app\models\Products;
 use yii\base\Model;
 use yii\web\UploadedFile;
+
 class CreateProductForm extends Model
 {
     public $name;

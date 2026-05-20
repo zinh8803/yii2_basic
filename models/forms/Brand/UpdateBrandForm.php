@@ -1,7 +1,10 @@
 <?php
+
 namespace app\models\forms\Brand;
+
 use app\models\Brands;
 use yii\base\Model;
+
 class UpdateBrandForm extends Model
 {
     public $id;

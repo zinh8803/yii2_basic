@@ -22,8 +22,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class AttributeValues extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -92,5 +90,4 @@ class AttributeValues extends \yii\db\ActiveRecord
     {
         return $this->hasOne(ProductAttributes::class, ['id' => 'attribute_id']);
     }
-
 }

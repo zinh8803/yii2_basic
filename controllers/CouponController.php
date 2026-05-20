@@ -127,6 +127,4 @@ class CouponController extends BaseController
 
         return $this->json(false, null, 'Failed to delete coupon', 500);
     }
-
-
 }

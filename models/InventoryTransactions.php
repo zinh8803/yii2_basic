@@ -23,8 +23,6 @@ use Yii;
  */
 class InventoryTransactions extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -98,5 +96,4 @@ class InventoryTransactions extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Warehouses::class, ['id' => 'warehouse_id']);
     }
-
 }

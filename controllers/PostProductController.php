@@ -72,7 +72,6 @@ class PostProductController extends BaseController
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
-
     }
 
     public function actionDelete($id)
@@ -92,5 +91,4 @@ class PostProductController extends BaseController
 
         return $this->json(false, null, 'Failed to delete post product', 500);
     }
-
 }

@@ -20,8 +20,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Taggables extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -30,11 +28,10 @@ class Taggables extends \yii\db\ActiveRecord
         return 'taggables';
     }
 
-    public static function find()
+    public static function find(): query\TaggableQuery
     {
         return new query\TaggableQuery(get_called_class());
     }
-
     /**
      * {@inheritdoc}
      */
@@ -45,6 +42,7 @@ class Taggables extends \yii\db\ActiveRecord
             [['tag_id', 'type'], 'required'],
             [['tag_id', 'post_id'], 'integer'],
             [['type'], 'string', 'max' => 255],
+            [['tag_id', 'post_id', 'type'], 'unique', 'targetAttribute' => ['tag_id', 'post_id', 'type']],
             [['post_id'], 'exist', 'skipOnError' => true, 'targetClass' => Posts::class, 'targetAttribute' => ['post_id' => 'id']],
             [['tag_id'], 'exist', 'skipOnError' => true, 'targetClass' => Tags::class, 'targetAttribute' => ['tag_id' => 'id']],
         ];
@@ -91,5 +89,4 @@ class Taggables extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Tags::class, ['id' => 'tag_id']);
     }
-
 }

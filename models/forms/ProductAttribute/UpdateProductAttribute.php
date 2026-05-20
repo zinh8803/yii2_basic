@@ -33,22 +33,14 @@ class UpdateProductAttribute extends Model
                 'unique',
                 'targetClass' => ProductAttributes::class,
                 'targetAttribute' => 'name',
-                'filter' => function ($query) {
-                    if ($this->id !== null) {
-                        $query->andWhere(['<>', 'id', $this->id]);
-                    }
-                },
+                'filter' => ['<>', 'id', $this->id],
             ],
             [
                 ['slug'],
                 'unique',
                 'targetClass' => ProductAttributes::class,
                 'targetAttribute' => 'slug',
-                'filter' => function ($query) {
-                    if ($this->id !== null) {
-                        $query->andWhere(['<>', 'id', $this->id]);
-                    }
-                },
+                'filter' => ['<>', 'id', $this->id],
             ],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
             [['attribute_value'], 'safe'],

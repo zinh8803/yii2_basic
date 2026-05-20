@@ -20,8 +20,6 @@ use Yii;
  */
 class CartItems extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -90,5 +88,4 @@ class CartItems extends \yii\db\ActiveRecord
     {
         return $this->hasOne(ProductVariants::class, ['id' => 'product_variant_id']);
     }
-
 }

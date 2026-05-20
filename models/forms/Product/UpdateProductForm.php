@@ -7,6 +7,7 @@ use app\models\Categories;
 use app\models\Products;
 use yii\base\Model;
 use yii\web\UploadedFile;
+
 class UpdateProductForm extends Model
 {
     public $id;
@@ -29,11 +30,7 @@ class UpdateProductForm extends Model
                 'unique',
                 'targetClass' => Products::class,
                 'targetAttribute' => 'name',
-                'filter' => function ($query) {
-                    if ($this->id !== null) {
-                        $query->andWhere(['<>', 'id', $this->id]);
-                    }
-                }
+                'filter' => ['<>', 'id', $this->id],
             ],
             [['name'], 'required'],
             [
@@ -41,11 +38,7 @@ class UpdateProductForm extends Model
                 'unique',
                 'targetClass' => Products::class,
                 'targetAttribute' => 'slug',
-                'filter' => function ($query) {
-                    if ($this->id !== null) {
-                        $query->andWhere(['<>', 'id', $this->id]);
-                    }
-                }
+                'filter' => ['<>', 'id', $this->id],
             ],
             [['category_id', 'brand_id', 'status'], 'integer'],
             [['name', 'slug', 'description'], 'string', 'max' => 255],

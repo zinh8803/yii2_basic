@@ -176,5 +176,4 @@ class Orders extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Payments::class, ['order_id' => 'id']);
     }
-
 }

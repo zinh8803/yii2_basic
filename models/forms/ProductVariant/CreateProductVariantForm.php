@@ -1,4 +1,5 @@
 <?php
+
 namespace app\models\forms\ProductVariant;
 
 use yii\base\Model;
@@ -23,5 +24,4 @@ class CreateProductVariantForm extends Model
             [['name', 'sku'], 'string', 'max' => 255],
         ];
     }
-
 }

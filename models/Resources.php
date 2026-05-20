@@ -24,8 +24,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Resources extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -103,5 +101,4 @@ class Resources extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Files::class, ['id' => 'file_id']);
     }
-
 }

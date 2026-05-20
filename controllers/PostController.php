@@ -23,9 +23,19 @@ class PostController extends BaseController
     public $modelClass = 'app\models\Posts';
     public function actionIndex()
     {
-        $searchModel = new PostSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
+        $cacheKey = 'posts_index_' . md5(json_encode($this->request->queryParams));
+
+        $data = Yii::$app->cache->getOrSet($cacheKey, function () {
+
+            $searchModel = new PostSearch();
+
+            $dataProvider = $searchModel->search(
+                $this->request->queryParams
+            );
+
+            return $this->paginate($dataProvider->query);
+        }, 60);
+
         return $this->json(true, $data, 'Posts retrieved successfully');
     }
 
@@ -403,51 +413,101 @@ class PostController extends BaseController
 
     private function syncPostProducts(Posts $post, array $productIds): void
     {
-        PostProducts::deleteAll(['post_id' => $post->id]);
         if (empty($productIds)) {
+            PostProducts::deleteAll(['post_id' => $post->id]);
             return;
         }
 
-        $sortOrder = 0;
-        foreach ($productIds as $productId) {
-            $postProduct = new PostProducts();
-            $postProduct->setAttributes([
-                'post_id' => $post->id,
-                'product_id' => (int) $productId,
-                'sort_order' => $sortOrder,
-            ], false);
+        PostProducts::deleteAll([
+            'and',
+            ['post_id' => $post->id],
+            ['not in', 'product_id', $productIds],
+        ]);
 
-            if (!$postProduct->save()) {
-                throw new \RuntimeException('Failed to save post product: ' . json_encode($postProduct->errors));
+        $existingPostProducts = PostProducts::find()
+            ->where([
+                'post_id' => $post->id,
+                'product_id' => $productIds,
+            ])
+            ->indexBy('product_id')
+            ->all();
+
+        $now = time();
+        $newRows = [];
+        foreach ($productIds as $sortOrder => $productId) {
+            $productId = (int) $productId;
+            $postProduct = $existingPostProducts[$productId] ?? null;
+
+            if ($postProduct instanceof PostProducts) {
+                if ((int) $postProduct->sort_order !== $sortOrder) {
+                    $postProduct->updateAttributes([
+                        'sort_order' => $sortOrder,
+                        'updated_at' => $now,
+                    ]);
+                }
+                continue;
             }
 
-            $sortOrder++;
+            $newRows[] = [$post->id, $productId, $sortOrder, null, $now, $now];
+        }
+
+        if ($newRows !== []) {
+            Yii::$app->db->createCommand()
+                ->batchInsert(
+                    PostProducts::tableName(),
+                    ['post_id', 'product_id', 'sort_order', 'note', 'created_at', 'updated_at'],
+                    $newRows
+                )
+                ->execute();
         }
     }
 
     private function syncPostTags(Posts $post, array $tagIds): void
     {
-        Taggables::deleteAll([
-            'post_id' => $post->id,
-            'type' => 'post',
-        ]);
-
         if (empty($tagIds)) {
+            Taggables::deleteAll([
+                'post_id' => $post->id,
+                'type' => 'post',
+            ]);
             return;
         }
 
-        foreach ($tagIds as $tagId) {
-            $taggable = new Taggables();
-            $taggable->setAttributes([
-                'tag_id' => (int) $tagId,
+        Taggables::deleteAll([
+            'and',
+            [
                 'post_id' => $post->id,
                 'type' => 'post',
-            ], false);
+            ],
+            ['not in', 'tag_id', $tagIds],
+        ]);
 
-            if (!$taggable->save()) {
-                throw new \RuntimeException('Failed to save taggable: ' . json_encode($taggable->errors));
-            }
+        $existingTagIds = Taggables::find()
+            ->select('tag_id')
+            ->where([
+                'post_id' => $post->id,
+                'type' => 'post',
+                'tag_id' => $tagIds,
+            ])
+            ->column();
+
+        $newTagIds = array_values(array_diff($tagIds, array_map('intval', $existingTagIds)));
+        if ($newTagIds === []) {
+            return;
         }
+
+        $now = time();
+        $rows = array_map(
+            fn(int $tagId): array => [$tagId, $post->id, 'post', $now, $now],
+            array_map('intval', $newTagIds)
+        );
+
+        Yii::$app->db->createCommand()
+            ->batchInsert(
+                Taggables::tableName(),
+                ['tag_id', 'post_id', 'type', 'created_at', 'updated_at'],
+                $rows
+            )
+            ->execute();
     }
 
     private function addModelErrors(Model $form, Model $model): void

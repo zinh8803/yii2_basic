@@ -19,8 +19,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Carts extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -82,5 +80,4 @@ class Carts extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

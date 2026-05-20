@@ -23,8 +23,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Reviews extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -98,5 +96,4 @@ class Reviews extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

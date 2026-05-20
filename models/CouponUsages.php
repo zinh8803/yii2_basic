@@ -22,8 +22,6 @@ use Yii;
  */
 class CouponUsages extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -93,5 +91,4 @@ class CouponUsages extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

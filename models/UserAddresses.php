@@ -22,8 +22,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class UserAddresses extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -86,5 +84,4 @@ class UserAddresses extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Users::class, ['id' => 'user_id']);
     }
-
 }

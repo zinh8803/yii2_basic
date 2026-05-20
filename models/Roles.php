@@ -16,8 +16,6 @@ use Yii;
  */
 class Roles extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -60,5 +58,4 @@ class Roles extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Users::class, ['role_id' => 'id']);
     }
-
 }

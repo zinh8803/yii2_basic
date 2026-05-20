@@ -21,8 +21,6 @@ use Yii;
  */
 class Warehouses extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -83,5 +81,4 @@ class Warehouses extends \yii\db\ActiveRecord
     {
         return $this->hasMany(WarehouseUsers::class, ['warehouse_id' => 'id']);
     }
-
 }

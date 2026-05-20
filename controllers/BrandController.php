@@ -103,5 +103,4 @@ class BrandController extends BaseController
 
         return $this->json(false, null, 'Failed to delete brand', 500);
     }
-
 }

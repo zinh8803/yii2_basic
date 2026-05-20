@@ -373,8 +373,7 @@ class OrderController extends BaseController
                 'payment_method' => $form->payment_method,
                 'payment_status' => $form->payment_status,
                 'shipping_fee' => $form->shipping_fee ?? 0,
-            ]
-            ,
+            ],
             false
         );
         return $order;

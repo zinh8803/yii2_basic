@@ -1,4 +1,5 @@
 <?php
+
 namespace app\models\forms\Brand;
 
 use app\models\Brands;

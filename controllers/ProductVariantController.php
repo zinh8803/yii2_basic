@@ -93,6 +93,4 @@ class ProductVariantController extends BaseController
 
         return $this->json(false, null, 'Failed to delete product variant', 500);
     }
-
-
 }

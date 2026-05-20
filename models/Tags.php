@@ -21,8 +21,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Tags extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -87,5 +85,4 @@ class Tags extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Taggables::class, ['tag_id' => 'id']);
     }
-
 }

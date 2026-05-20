@@ -1,4 +1,5 @@
 <?php
+
 namespace app\models\forms\ProductVariant;
 
 use yii\base\Model;
@@ -25,5 +26,4 @@ class UpdateProductVariantForm extends Model
             [['name', 'sku'], 'string', 'max' => 255],
         ];
     }
-
 }

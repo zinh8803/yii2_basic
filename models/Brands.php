@@ -20,8 +20,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Brands extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -103,5 +101,4 @@ class Brands extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Products::class, ['brand_id' => 'id']);
     }
-
 }

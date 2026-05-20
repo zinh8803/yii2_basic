@@ -12,8 +12,6 @@ use Yii;
  */
 class Migration extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -46,5 +44,4 @@ class Migration extends \yii\db\ActiveRecord
             'apply_time' => 'Apply Time',
         ];
     }
-
 }

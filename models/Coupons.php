@@ -26,8 +26,6 @@ use yii\behaviors\TimestampBehavior;
  */
 class Coupons extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -104,5 +102,4 @@ class Coupons extends \yii\db\ActiveRecord
     {
         return $this->hasMany(CouponUsages::class, ['coupon_id' => 'id']);
     }
-
 }
