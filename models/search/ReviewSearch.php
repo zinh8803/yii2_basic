@@ -2,6 +2,7 @@
 
 namespace app\models\search;
 
+use app\models\response\Review\ReviewResponse;
 use app\models\Reviews;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
@@ -25,7 +26,7 @@ class ReviewSearch extends Reviews
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = Reviews::find();
+        $query = ReviewResponse::find();
         $dataProvider = new ActiveDataProvider(['query' => $query]);
 
         $this->load($params, $formName);

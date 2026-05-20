@@ -2,6 +2,9 @@
 
 namespace app\controllers;
 
+use app\models\forms\Review\CreateReviewForm;
+use app\models\forms\Review\UpdateApprovedReviewForm;
+use app\models\OrderItems;
 use app\models\Reviews;
 use app\models\search\ReviewSearch;
 use Yii;
@@ -10,25 +13,7 @@ use yii\filters\VerbFilter;
 
 class ReviewController extends BaseController
 {
-    public $modelClass = 'app\\models\\Reviews';
-
-    /**
-     * @inheritDoc
-     */
-    public function behaviors()
-    {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'verbs' => [
-                    'class' => VerbFilter::className(),
-                    'actions' => [
-                        'delete' => ['POST'],
-                    ],
-                ],
-            ]
-        );
-    }
+    public $modelClass = 'app\models\Reviews';
 
     public function actionIndex()
     {
@@ -46,9 +31,28 @@ class ReviewController extends BaseController
 
     public function actionCreate()
     {
-        $model = new Reviews();
+        $form = new CreateReviewForm();
 
-        $model->load($this->request->bodyParams, '');
+        $form->load($this->request->bodyParams, '');
+
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
+        $hasPurchased = OrderItems::find()
+            ->joinWith('order')
+            ->where(['orders.user_id' => $form->user_id, 'order_items.product_id' => $form->product_id])
+            ->exists();
+        if (!$hasPurchased) {
+            return $this->json(
+                false,
+                null,
+                'You must purchase this product before reviewing.'
+            );
+        }
+
+        $model = new Reviews();
+        $model->setAttributes($form->attributes, false);
+
         try {
             if ($model->save()) {
                 return $this->json(true, $model, 'Review created successfully', 201);
@@ -59,6 +63,7 @@ class ReviewController extends BaseController
         }
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
+
     }
 
     public function actionUpdate($id)
@@ -77,6 +82,32 @@ class ReviewController extends BaseController
 
         return $this->json(false, $model->errors, 'Validation failed', 422);
     }
+
+    public function actionChangeApprove($id)
+    {
+        $model = Reviews::findOne(['id' => $id]);
+        if (!$model) {
+            return $this->json(false, null, 'Review not found', 404);
+        }
+        $form = new UpdateApprovedReviewForm();
+        $form->id = $id;
+        $form->load($this->request->bodyParams, '');
+        if (!$form->validate()) {
+            return $this->json(false, $form->errors, 'Validation failed', 422);
+        }
+        $model->is_approved = (int) !$model->is_approved;
+        try {
+            if ($model->save()) {
+                return $this->json(true, $model, 'Review approval status updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->json(false, null, 'Internal server error', 500);
+        }
+
+        return $this->json(false, $model->errors, 'Validation failed', 422);
+    }
+
     public function actionDelete($id)
     {
         try {
@@ -98,6 +129,6 @@ class ReviewController extends BaseController
             return $model;
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        return $this->json(false, null, 'Review not found', 404);
     }
 }

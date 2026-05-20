@@ -12,7 +12,7 @@ use yii\behaviors\TimestampBehavior;
  * @property int $id
  * @property int $product_id
  * @property int $user_id
- * @property int $rating
+ * @property float $rating
  * @property string|null $comment
  * @property int $is_approved
  * @property int $created_at
@@ -45,9 +45,10 @@ class Reviews extends \yii\db\ActiveRecord
     {
         return [
             [['comment'], 'default', 'value' => null],
-            [['is_approved'], 'default', 'value' => 0],
+            [['is_approved'], 'default', 'value' => 1],
             [['product_id', 'user_id', 'rating'], 'required'],
-            [['product_id', 'user_id', 'rating', 'is_approved'], 'integer'],
+            [['product_id', 'user_id'], 'integer'],
+            [['rating'], 'number', 'min' => 1, 'max' => 5],
             [['comment'], 'string'],
             [['product_id'], 'exist', 'skipOnError' => true, 'targetClass' => Products::class, 'targetAttribute' => ['product_id' => 'id']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
