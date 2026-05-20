@@ -13,16 +13,7 @@ class ProductResponse extends Products
             'brand_id',
             'slug',
             'image' => function () {
-                $relatedRecords = $this->getRelatedRecords();
-                $primaryResource = $relatedRecords['primaryResource'] ?? null;
-                if ($primaryResource === null && !$this->isRelationPopulated('primaryResource')) {
-                    $primaryResource = $this->getPrimaryResource()->with(['file'])->one();
-                }
-
-                if ($primaryResource && $primaryResource->file) {
-                    return $primaryResource->file->url;
-                }
-                return null;
+                return $this->primaryResource?->file?->url;
             },
             'description',
             'status',
@@ -42,7 +33,6 @@ class ProductResponse extends Products
             'brand',
             'productVariants',
             'productAttributes',
-            'productAttributes.attributeValues',
         ];
     }
 }

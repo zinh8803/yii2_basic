@@ -2,19 +2,17 @@
 
 namespace app\controllers;
 
-use app\models\Files;
+use app\helpers\ResourceImageHelper;
 use app\models\forms\Post\CreatePostForm;
 use app\models\forms\Post\UpdatePostForm;
 use app\models\forms\Post\UpdatePostStatusForm;
 use app\models\Posts;
 use app\models\PostProducts;
-use app\models\Resources;
 use app\models\Taggables;
 use app\models\response\Post\PostResponse;
 use app\models\search\PostSearch;
 use Yii;
 use yii\base\Model;
-use yii\helpers\FileHelper;
 use yii\web\NotFoundHttpException;
 use yii\web\UploadedFile;
 
@@ -51,12 +49,11 @@ class PostController extends BaseController
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
         if ($isMultipart) {
             $form->load($request->post(), '');
-            $form->imageFile = $this->getUploadedImageFile($form);
-            $this->logMissingMultipartImage($form->imageFile);
+            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
+            ResourceImageHelper::logMissingMultipartImage($form->imageFile);
         } else {
             $form->load($this->request->bodyParams, '');
         }
-
         if ($form->validate()) {
             $post = new Posts();
             $post->setAttributes($form->attributes, false);
@@ -70,11 +67,9 @@ class PostController extends BaseController
 
                 $this->syncPostProducts($post, $this->normalizeIdArray($form->products));
                 $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
-
                 if ($form->imageFile instanceof UploadedFile) {
-                    $this->attachImage($post, $form->imageFile, $form);
+                    ResourceImageHelper::attachImage('post', $post->id, $post->user_id, 'uploads/posts', $form->imageFile, $form);
                 }
-
                 $transaction->commit();
                 return $this->json(true, $post, 'Post created successfully', 201);
             } catch (\Throwable $e) {
@@ -97,15 +92,13 @@ class PostController extends BaseController
         $request = Yii::$app->request;
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
         $data = [];
-
         if ($isMultipart) {
             $data = $request->post();
-            $form->imageFile = $this->getUploadedImageFile($form);
-            $this->logMissingMultipartImage($form->imageFile);
+            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
+            ResourceImageHelper::logMissingMultipartImage($form->imageFile);
         } else {
             $data = $request->bodyParams;
         }
-
         $form->load($data, '');
 
         if ($isMultipart && empty($data) && $form->imageFile === null) {
@@ -136,12 +129,10 @@ class PostController extends BaseController
             if ($form->tag_ids !== null) {
                 $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
             }
-
             if ($form->imageFile instanceof UploadedFile) {
-                $this->markPostImagesNonPrimary($post);
-                $this->attachImage($post, $form->imageFile, $form, true);
+                ResourceImageHelper::markImagesNonPrimary('post', $post->id);
+                ResourceImageHelper::attachImage('post', $post->id, $post->user_id, 'uploads/posts', $form->imageFile, $form);
             }
-
             $transaction->commit();
             return $this->json(true, $post, 'Post updated successfully');
         } catch (\Throwable $e) {
@@ -177,7 +168,7 @@ class PostController extends BaseController
     {
         try {
             $post = $this->findModel($id);
-            $this->deletePostImageRecords($post);
+            ResourceImageHelper::deleteImageRecords('post', $post->id);
             if ($post->delete()) {
                 return $this->json(true, null, 'Post deleted successfully');
             }
@@ -196,68 +187,6 @@ class PostController extends BaseController
         }
 
         throw new NotFoundHttpException('The requested page does not exist.');
-    }
-
-    private function attachImage(Posts $post, UploadedFile $imageFile, Model $form, bool $isPrimary = true): void
-    {
-        $uploadDir = Yii::getAlias('@webroot/uploads/posts');
-        FileHelper::createDirectory($uploadDir);
-
-        $fileName = Yii::$app->security->generateRandomString(16) . '.' . $imageFile->extension;
-        $relativePath = 'uploads/posts/' . $fileName;
-        $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-        if (!$imageFile->saveAs($fullPath)) {
-            $form->addError('imageFile', 'Failed to upload image.');
-            throw new \RuntimeException('Failed to upload image.');
-        }
-
-        try {
-            $file = $this->createFileRecord($post, $imageFile, $relativePath, $fullPath);
-            $this->createImageResource($post, $file, $isPrimary);
-        } catch (\Throwable $e) {
-            @unlink($fullPath);
-            if (!$form->hasErrors('imageFile')) {
-                $form->addError('imageFile', 'Failed to save image information.');
-            }
-            throw $e;
-        }
-    }
-
-    private function getUploadedImageFile(Model $form): ?UploadedFile
-    {
-        $file = UploadedFile::getInstance($form, 'imageFile');
-        if ($file instanceof UploadedFile) {
-            return $file;
-        }
-
-        foreach (['imageFile', 'image_file', 'image', 'file'] as $fieldName) {
-            $file = UploadedFile::getInstanceByName($fieldName);
-            if ($file instanceof UploadedFile) {
-                return $file;
-            }
-
-            $files = UploadedFile::getInstancesByName($fieldName);
-            if (!empty($files)) {
-                return $files[0];
-            }
-        }
-
-        return null;
-    }
-
-    private function logMissingMultipartImage(?UploadedFile $imageFile): void
-    {
-        if ($imageFile !== null) {
-            return;
-        }
-
-        Yii::warning([
-            'message' => 'Multipart request did not include an uploaded image file.',
-            'post_keys' => array_keys(Yii::$app->request->post()),
-            'file_keys' => array_keys($_FILES),
-            'expected_file_keys' => ['imageFile', 'image_file', 'image', 'file'],
-        ], __METHOD__);
     }
 
     private function applyFormToPost(Posts $post, UpdatePostForm $form): void
@@ -291,88 +220,6 @@ class PostController extends BaseController
         }
         if ($form->published_at !== null) {
             $post->published_at = $form->published_at;
-        }
-    }
-
-    private function createFileRecord(Posts $post, UploadedFile $imageFile, string $relativePath, string $fullPath): Files
-    {
-        $size = @getimagesize($fullPath);
-
-        $file = new Files();
-        $file->user_id = $post->user_id;
-        $file->disk = 'local';
-        $file->path = $relativePath;
-        $file->url = Yii::getAlias('@web/' . $relativePath);
-        $file->original_name = $imageFile->name;
-        $file->mime_type = $imageFile->type;
-        $file->size_bytes = $imageFile->size;
-        $file->width = $size ? $size[0] : null;
-        $file->height = $size ? $size[1] : null;
-
-        if (!$file->save()) {
-            throw new \RuntimeException('Failed to save file record: ' . json_encode($file->errors));
-        }
-
-        return $file;
-    }
-
-    private function createImageResource(Posts $post, Files $file, bool $isPrimary): void
-    {
-        $resource = new Resources();
-        $resource->file_id = $file->id;
-        $resource->resource_type = 'post';
-        $resource->resource_id = $post->id;
-        $resource->type = 'image';
-        $resource->title = $file->original_name;
-        $resource->alt_text = null;
-        $resource->sort_order = 0;
-        $resource->is_primary = $isPrimary ? 1 : 0;
-
-        if (!$resource->save()) {
-            throw new \RuntimeException('Failed to save image resource: ' . json_encode($resource->errors));
-        }
-    }
-
-    private function markPostImagesNonPrimary(Posts $post): void
-    {
-        Resources::updateAll(
-            ['is_primary' => 0],
-            [
-                'resource_type' => 'post',
-                'resource_id' => $post->id,
-                'type' => 'image',
-                'is_primary' => 1,
-            ]
-        );
-    }
-
-    private function deletePostImageRecords(Posts $post): void
-    {
-        $resources = Resources::find()
-            ->with(['file'])
-            ->where([
-                'resource_type' => 'post',
-                'resource_id' => $post->id,
-                'type' => 'image',
-            ])
-            ->all();
-
-        foreach ($resources as $resource) {
-            $relatedRecords = $resource->getRelatedRecords();
-            $file = $relatedRecords['file'] ?? null;
-            $fullPath = null;
-            if ($file && $file->path) {
-                $fullPath = Yii::getAlias('@webroot/' . ltrim($file->path, '/\\'));
-            }
-
-            $resource->delete();
-
-            if ($file !== null) {
-                $file->delete();
-            }
-            if ($fullPath !== null && is_file($fullPath)) {
-                @unlink($fullPath);
-            }
         }
     }
 

@@ -50,9 +50,9 @@ class ProductSearch extends Products
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
-            // 'pagination' => [
-            //     'pageSize' => 10,
-            // ],
+            'pagination' => [
+                'pageSize' => 10,
+            ],
         ]);
 
         $this->load($params, $formName);
@@ -87,5 +87,12 @@ class ProductSearch extends Products
         }
 
         return $dataProvider;
+    }
+
+    public function searchByCategory($categoryId, array $params = [], $formName = ''): ActiveDataProvider
+    {
+        $params['category_id'] = (int) $categoryId;
+
+        return $this->search($params, $formName);
     }
 }

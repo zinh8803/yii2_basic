@@ -88,7 +88,7 @@ class Resources extends \yii\db\ActiveRecord
             'alt_text',
             'sort_order',
             'is_primary',
-            'file',
+            //'file',
             'created_at',
             'updated_at',
         ];

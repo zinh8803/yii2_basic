@@ -3,6 +3,7 @@
 namespace app\controllers;
 
 use Yii;
+use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 
 class BaseController extends ActiveController
@@ -30,7 +31,19 @@ class BaseController extends ActiveController
             "code" => $code
         ];
     }
-
+    protected function successPaginate(ActiveDataProvider $dataProvider)
+    {
+        return [
+            'status' => true,
+            'data' => $dataProvider->getModels(),
+            '_meta' => [
+                'totalCount' => $dataProvider->getTotalCount(),
+                'pageCount' => $dataProvider->pagination->getPageCount(),
+                'currentPage' => $dataProvider->pagination->getPage() + 1,
+                'perPage' => $dataProvider->pagination->getPageSize(),
+            ],
+        ];
+    }
     public function paginate($query, int $defaultLimit = 10): array
     {
         $page = (int) Yii::$app->request->get('page', 1);

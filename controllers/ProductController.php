@@ -2,14 +2,12 @@
 
 namespace app\controllers;
 
+use app\helpers\ResourceImageHelper;
 use app\models\forms\Product\CreateProductForm;
 use app\models\forms\Product\UpdateProductForm;
-use app\models\Files;
 use app\models\Products;
-use app\models\Resources;
 use Yii;
 use yii\base\Model;
-use yii\helpers\FileHelper;
 use app\controllers\BaseController as BaseController;
 use app\models\response\Product\ProductResponse;
 use app\models\search\ProductSearch;
@@ -23,7 +21,8 @@ class ProductController extends BaseController
         $searchModel = new ProductSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, "Get list product successfully");
+        return $this->json(true, $data, 'Get list product successfully');
+        //return $this->successPaginate($dataProvider);
     }
 
 
@@ -32,8 +31,8 @@ class ProductController extends BaseController
         $model = ProductResponse::find()
             ->with([
                 'category',
+                'brand',
                 'productVariants',
-                'productAttributes',
                 'productAttributes.attributeValues',
                 'primaryResource.file'
             ])
@@ -52,7 +51,7 @@ class ProductController extends BaseController
 
         if ($isMultipart) {
             $form->load($request->post(), '');
-            $form->imageFile = UploadedFile::getInstanceByName('imageFile');
+            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
         } else {
             $form->load($request->bodyParams, '');
         }
@@ -81,7 +80,7 @@ class ProductController extends BaseController
         $searchModel = new ProductSearch();
         $dataProvider = $searchModel->searchByCategory($categoryId, $this->request->queryParams);
         $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, "Get list product by category successfully");
+        return $this->json(true, $data, 'Get list product by category successfully');
     }
 
     public function actionUpdate($id)
@@ -94,7 +93,7 @@ class ProductController extends BaseController
 
         if ($isMultipart) {
             $data = $request->post();
-            $form->imageFile = UploadedFile::getInstanceByName('imageFile');
+            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
         } else {
             $data = $request->bodyParams;
         }
@@ -177,7 +176,7 @@ class ProductController extends BaseController
             }
 
             if ($form->imageFile instanceof UploadedFile) {
-                $this->attachImage($product, $form->imageFile, $form, true);
+                ResourceImageHelper::attachImage('product', $product->id, 9, 'uploads/products', $form->imageFile, $form);
             }
 
             $transaction->commit();
@@ -211,8 +210,8 @@ class ProductController extends BaseController
             }
 
             if ($form->imageFile instanceof UploadedFile) {
-                $this->markProductImagesNonPrimary($product);
-                $this->attachImage($product, $form->imageFile, $form, true);
+                ResourceImageHelper::markImagesNonPrimary('product', $product->id);
+                ResourceImageHelper::attachImage('product', $product->id, 9, 'uploads/products', $form->imageFile, $form);
             }
 
             $transaction->commit();
@@ -224,84 +223,6 @@ class ProductController extends BaseController
             Yii::error($e->getMessage(), __METHOD__);
             return false;
         }
-    }
-
-    private function attachImage(Products $product, UploadedFile $imageFile, Model $form, bool $isPrimary = true): void
-    {
-        $uploadDir = Yii::getAlias('@webroot/uploads/products');
-        FileHelper::createDirectory($uploadDir);
-
-        $fileName = Yii::$app->security->generateRandomString(16) . '.' . $imageFile->extension;
-        $relativePath = 'uploads/products/' . $fileName;
-        $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-        if (!$imageFile->saveAs($fullPath)) {
-            $form->addError('imageFile', 'Failed to upload image.');
-            throw new \RuntimeException('Failed to upload image.');
-        }
-
-        try {
-            $file = $this->createFileRecord($imageFile, $relativePath, $fullPath);
-            $this->createImageResource($product, $file, $isPrimary);
-        } catch (\Throwable $e) {
-            @unlink($fullPath);
-            if (!$form->hasErrors('imageFile')) {
-                $form->addError('imageFile', 'Failed to save image information.');
-            }
-            throw $e;
-        }
-    }
-
-    private function createFileRecord(UploadedFile $imageFile, string $relativePath, string $fullPath): Files
-    {
-        $size = @getimagesize($fullPath);
-
-        $file = new Files();
-        $file->user_id = 9;
-        $file->disk = 'local';
-        $file->path = $relativePath;
-        $file->url = Yii::getAlias('@web/' . $relativePath);
-        $file->original_name = $imageFile->name;
-        $file->mime_type = $imageFile->type;
-        $file->size_bytes = $imageFile->size;
-        $file->width = $size ? $size[0] : null;
-        $file->height = $size ? $size[1] : null;
-
-        if (!$file->save()) {
-            throw new \RuntimeException('Failed to save file record: ' . json_encode($file->errors));
-        }
-
-        return $file;
-    }
-
-    private function createImageResource(Products $product, Files $file, bool $isPrimary): void
-    {
-        $resource = new Resources();
-        $resource->file_id = $file->id;
-        $resource->resource_type = 'product';
-        $resource->resource_id = $product->id;
-        $resource->type = 'image';
-        $resource->title = $file->original_name;
-        $resource->alt_text = null;
-        $resource->sort_order = 0;
-        $resource->is_primary = $isPrimary ? 1 : 0;
-
-        if (!$resource->save()) {
-            throw new \RuntimeException('Failed to save image resource: ' . json_encode($resource->errors));
-        }
-    }
-
-    private function markProductImagesNonPrimary(Products $product): void
-    {
-        Resources::updateAll(
-            ['is_primary' => 0],
-            [
-                'resource_type' => 'product',
-                'resource_id' => $product->id,
-                'type' => 'image',
-                'is_primary' => 1,
-            ]
-        );
     }
 
     private function addModelErrors(Model $form, Model $model): void
