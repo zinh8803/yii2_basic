@@ -32,6 +32,10 @@ $config = [
         'cache' => [
             'class' => \yii\caching\FileCache::class,
         ],
+        // function helper to get image url from resource
+        'resourceImageHelper' => [
+            'class' => \app\components\ResourceImageHelper::class,
+        ],
         'user' => [
             'identityClass' => \app\models\User::class,
             'enableAutoLogin' => true,

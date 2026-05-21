@@ -27,12 +27,12 @@ use app\models\Resources;
  * @property PostProducts[] $postProducts
  * @property ProductAttributes[] $productAttributes
  * @property ProductVariants[] $productVariants
+ * @property Resources[] $resources
+ * @property Resources|null $primaryResource
  * @property Reviews[] $reviews
  */
 class Products extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -109,7 +109,7 @@ class Products extends \yii\db\ActiveRecord
         ];
     }
 
-    public static function find()
+    public static function find(): query\ProductQuery
     {
         return new query\ProductQuery(get_called_class());
     }
@@ -213,5 +213,4 @@ class Products extends \yii\db\ActiveRecord
     {
         return $this->hasMany(Reviews::class, ['product_id' => 'id']);
     }
-
 }

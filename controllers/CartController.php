@@ -8,6 +8,7 @@ use app\models\ProductVariants;
 use app\models\forms\Cart\AddToCartForm;
 use app\models\response\Cart\CartResponse;
 use Yii;
+use yii\web\BadRequestHttpException;
 use yii\web\NotFoundHttpException;
 
 class CartController extends BaseController
@@ -151,12 +152,17 @@ class CartController extends BaseController
                 $transaction->rollBack();
             }
             return $this->json(false, null, $exception->getMessage(), 404);
+        } catch (BadRequestHttpException $exception) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
+            return $this->json(false, null, $exception->getMessage(), 400);
         } catch (\Throwable $exception) {
             if ($transaction->isActive) {
                 $transaction->rollBack();
             }
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            return $this->json(false, null, $exception->getMessage()    , 500);
         }
     }
 
@@ -187,6 +193,14 @@ class CartController extends BaseController
 
             $item = $existingItems[(int) $variant->id] ?? null;
             $price = $variant->sale_price !== null ? $variant->sale_price : $variant->price;
+            $currentQuantity = $item === null ? 0 : (int) $item->quantity;
+            $newQuantity = $currentQuantity + (int) $form->quantity;
+
+            if ($newQuantity > (int) $variant->stock) {
+                throw new BadRequestHttpException(
+                    'Requested quantity for variant ' . $variant->id . ' exceeds stock. Available stock: ' . $variant->stock
+                );
+            }
 
             if ($item === null) {
                 $item = new CartItems();
@@ -200,7 +214,7 @@ class CartController extends BaseController
             }
 
             $item->setAttributes([
-                'quantity' => (int) $item->quantity + (int) $form->quantity,
+                'quantity' => $newQuantity,
                 'price' => $price,
             ], false);
 

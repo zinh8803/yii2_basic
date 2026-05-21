@@ -2,7 +2,7 @@
 
 namespace app\controllers;
 
-use app\helpers\ResourceImageHelper;
+use app\components\ResourceImageHelper;
 use app\models\forms\Product\CreateProductForm;
 use app\models\forms\Product\UpdateProductForm;
 use app\models\Products;
@@ -32,7 +32,8 @@ class ProductController extends BaseController
             ->with([
                 'category',
                 'brand',
-                'productVariants',
+                'productVariants.resources.file',
+                'productVariants.primaryResource.file',
                 'productAttributes.attributeValues',
                 'primaryResource.file'
             ])
@@ -175,9 +176,7 @@ class ProductController extends BaseController
                 throw new \RuntimeException('Failed to save product.');
             }
 
-            if ($form->imageFile instanceof UploadedFile) {
-                ResourceImageHelper::attachImage('product', $product->id, 9, 'uploads/products', $form->imageFile, $form);
-            }
+            $this->attachProductImageFromForm($product, $form);
 
             $transaction->commit();
             return true;
@@ -209,10 +208,7 @@ class ProductController extends BaseController
                 throw new \RuntimeException('Failed to save product.');
             }
 
-            if ($form->imageFile instanceof UploadedFile) {
-                ResourceImageHelper::markImagesNonPrimary('product', $product->id);
-                ResourceImageHelper::attachImage('product', $product->id, 9, 'uploads/products', $form->imageFile, $form);
-            }
+            $this->attachProductImageFromForm($product, $form, true);
 
             $transaction->commit();
             return true;
@@ -223,6 +219,36 @@ class ProductController extends BaseController
             Yii::error($e->getMessage(), __METHOD__);
             return false;
         }
+    }
+
+    private function attachProductImageFromForm(
+        Products $product,
+        CreateProductForm|UpdateProductForm $form,
+        bool $replacePrimary = false
+    ): void {
+        if (
+            !$form->imageFile instanceof UploadedFile
+            && empty($form->image_file_id)
+            && empty($form->image_resource_id)
+        ) {
+            return;
+        }
+
+        if ($replacePrimary) {
+            ResourceImageHelper::markImagesNonPrimary('product', $product->id);
+        }
+
+        if ($form->imageFile instanceof UploadedFile) {
+            ResourceImageHelper::attachImage('product', $product->id, 9, 'uploads/products', $form->imageFile, $form);
+            return;
+        }
+
+        if (!empty($form->image_resource_id)) {
+            ResourceImageHelper::attachExistingImageResource('product', $product->id, (int) $form->image_resource_id);
+            return;
+        }
+
+        ResourceImageHelper::attachExistingImageFile('product', $product->id, (int) $form->image_file_id);
     }
 
     private function addModelErrors(Model $form, Model $model): void

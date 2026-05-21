@@ -4,6 +4,7 @@ parameters:
     paths:
         - assets
         - commands
+        - components
         - controllers
         - mail
         - models

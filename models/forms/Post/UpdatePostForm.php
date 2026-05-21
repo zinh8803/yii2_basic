@@ -2,6 +2,8 @@
 
 namespace app\models\forms\Post;
 
+use app\models\Files;
+use app\models\Resources;
 use app\models\Users;
 use yii\base\Model;
 use yii\web\UploadedFile;
@@ -12,8 +14,10 @@ class UpdatePostForm extends Model
     public $user_id;
     public $title;
     public $slug;
-    /** @var UploadedFile|null */
+/** @var UploadedFile|null */
     public $imageFile;
+    public $image_file_id;
+    public $image_resource_id;
     public $excerpt;
     public $content;
     public $status;
@@ -26,13 +30,15 @@ class UpdatePostForm extends Model
     public function rules()
     {
         return [
+            [['image_file_id', 'image_resource_id'], 'default', 'value' => null],
             [['id'], 'required'],
-            [['id', 'user_id', 'published_at'], 'integer'],
+            [['id', 'user_id', 'published_at', 'image_file_id', 'image_resource_id'], 'integer'],
             [['excerpt', 'content'], 'string'],
             [['title', 'slug', 'meta_title', 'meta_description'], 'string', 'max' => 255],
             [['status', 'post_style'], 'string', 'max' => 50],
             [['tag_ids'], 'each', 'rule' => ['integer']],
             [['products'], 'each', 'rule' => ['integer']],
+            [['imageFile'], 'validateSingleImageSource'],
             [
                 ['imageFile'],
                 'file',
@@ -41,7 +47,34 @@ class UpdatePostForm extends Model
                 'checkExtensionByMimeType' => false,
                 'maxSize' => 5 * 1024 * 1024,
             ],
+            [
+                ['image_file_id'],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => Files::class,
+                'targetAttribute' => ['image_file_id' => 'id'],
+            ],
+            [
+                ['image_resource_id'],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => Resources::class,
+                'targetAttribute' => ['image_resource_id' => 'id'],
+                'filter' => ['type' => 'image'],
+            ],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
+    }
+
+    public function validateSingleImageSource(): void
+    {
+        $sources = array_filter([
+            $this->imageFile instanceof UploadedFile,
+            !empty($this->image_file_id),
+            !empty($this->image_resource_id),
+        ]);
+        if (count($sources) > 1) {
+            $this->addError('imageFile', 'Choose only one image source.');
+        }
     }
 }

@@ -25,11 +25,11 @@ use yii\helpers\Inflector;
  * @property CartItems[] $cartItems
  * @property OrderItems[] $orderItems
  * @property Products $product
+ * @property Resources[] $resources
+ * @property Resources|null $primaryResource
  */
 class ProductVariants extends \yii\db\ActiveRecord
 {
-
-
     /**
      * {@inheritdoc}
      */
@@ -38,7 +38,7 @@ class ProductVariants extends \yii\db\ActiveRecord
         return 'product_variants';
     }
 
-    public static function find()
+    public static function find(): query\ProductVariantQuery
     {
         return new query\ProductVariantQuery(get_called_class());
     }
@@ -138,13 +138,27 @@ class ProductVariants extends \yii\db\ActiveRecord
         return $this->hasOne(Products::class, ['id' => 'product_id']);
     }
 
+    public function getResources()
+    {
+        return $this->hasMany(Resources::class, ['resource_id' => 'id'])
+            ->andWhere(['resource_type' => 'product_variant'])
+            ->orderBy(['sort_order' => SORT_ASC, 'id' => SORT_ASC]);
+    }
+
+    public function getPrimaryResource()
+    {
+        return $this->hasOne(Resources::class, ['resource_id' => 'id'])
+            ->andWhere([
+                'resource_type' => 'product_variant',
+                'type' => 'image',
+                'is_primary' => 1,
+            ]);
+    }
+
     private function generateUniqueSku(): string
     {
-        $productName = $this->product ? $this->product->name : null;
-        if ($productName === null && $this->product_id) {
-            $product = Products::findOne($this->product_id);
-            $productName = $product ? $product->name : null;
-        }
+        $product = !empty($this->product_id) ? Products::findOne($this->product_id) : null;
+        $productName = $product ? $product->name : null;
 
         $base = trim(($productName ?: '') . ' ' . ($this->name ?: ''));
         $skuBase = strtoupper(Inflector::slug($base, '-'));
@@ -161,6 +175,4 @@ class ProductVariants extends \yii\db\ActiveRecord
 
         return $sku;
     }
-
-
 }

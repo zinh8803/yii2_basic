@@ -44,7 +44,7 @@ class ProductSearch extends Products
      */
     public function search($params, $formName = '')
     {
-        $query = ProductResponse::find()->with(['primaryResource.file']);
+        $query = ProductResponse::find()->with(['primaryResource.file', 'productVariants']);
 
         // add conditions that should always apply here
 

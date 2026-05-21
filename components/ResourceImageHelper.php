@@ -1,38 +1,39 @@
 <?php
 
-namespace app\helpers;
+namespace app\components;
 
 use app\models\Files;
 use app\models\Resources;
 use Yii;
+use yii\base\Component;
 use yii\base\Model;
 use yii\helpers\FileHelper;
 use yii\web\UploadedFile;
 
-final class ResourceImageHelper
+final class ResourceImageHelper extends Component
 {
-    public static function getUploadedImageFile(
-        Model $form,
-        array $fieldNames = ['imageFile', 'image_file', 'image', 'file']
-    ): ?UploadedFile {
-        $file = UploadedFile::getInstance($form, 'imageFile');
-        if ($file instanceof UploadedFile) {
-            return $file;
-        }
-
+    public static function getUploadedImageFile(Model $form, array $fieldNames = ['imageFile', 'image_file', 'image', 'file']): ?UploadedFile
+    {
+        $files = UploadedFile::getInstances($form, 'imageFile');
         foreach ($fieldNames as $fieldName) {
-            $file = UploadedFile::getInstanceByName($fieldName);
-            if ($file instanceof UploadedFile) {
-                return $file;
-            }
-
-            $files = UploadedFile::getInstancesByName($fieldName);
-            if (!empty($files)) {
-                return $files[0];
-            }
+            array_push($files, ...UploadedFile::getInstancesByName($fieldName));
         }
 
-        return null;
+        if (count($files) > 1) {
+            throw new \InvalidArgumentException('Only one image file can be uploaded.');
+        }
+
+        return $files[0] ?? null;
+    }
+
+    public static function getUploadedImageFiles(Model $form, array $fieldNames = ['imageFiles', 'image_files', 'images', 'files', 'imageFile']): array
+    {
+        $files = UploadedFile::getInstances($form, 'imageFiles');
+        foreach ($fieldNames as $fieldName) {
+            array_push($files, ...UploadedFile::getInstancesByName($fieldName));
+        }
+
+        return $files;
     }
 
     public static function attachImage(
@@ -42,7 +43,8 @@ final class ResourceImageHelper
         string $uploadFolder,
         UploadedFile $imageFile,
         Model $form,
-        bool $isPrimary = true
+        bool $isPrimary = true,
+        int $sortOrder = 0
     ): Resources {
         $uploadFolder = trim(str_replace('\\', '/', $uploadFolder), '/');
         $uploadDir = Yii::getAlias('@webroot/' . str_replace('/', DIRECTORY_SEPARATOR, $uploadFolder));
@@ -59,7 +61,7 @@ final class ResourceImageHelper
 
         try {
             $file = self::createFileRecord($userId, $imageFile, $relativePath, $fullPath);
-            return self::createImageResource($resourceType, $resourceId, $file, $isPrimary);
+            return self::createImageResource($resourceType, $resourceId, $file, $isPrimary, $sortOrder);
         } catch (\Throwable $e) {
             @unlink($fullPath);
             if (!$form->hasErrors('imageFile')) {
@@ -80,6 +82,43 @@ final class ResourceImageHelper
                 'is_primary' => 1,
             ]
         );
+    }
+
+    public static function attachExistingImageFile(
+        string $resourceType,
+        int $resourceId,
+        int $fileId,
+        bool $isPrimary = true,
+        int $sortOrder = 0
+    ): Resources {
+        $file = Files::findOne(['id' => $fileId]);
+        if ($file === null) {
+            throw new \RuntimeException('File not found.');
+        }
+
+        return self::createImageResource($resourceType, $resourceId, $file, $isPrimary, $sortOrder);
+    }
+
+    public static function attachExistingImageResource(
+        string $resourceType,
+        int $resourceId,
+        int $resourceImageId,
+        bool $isPrimary = true,
+        int $sortOrder = 0
+    ): Resources {
+        $sourceResource = Resources::find()
+            ->with(['file'])
+            ->where([
+                'id' => $resourceImageId,
+                'type' => 'image',
+            ])
+            ->one();
+
+        if ($sourceResource === null) {
+            throw new \RuntimeException('Image resource not found.');
+        }
+
+        return self::createImageResource($resourceType, $resourceId, $sourceResource->file, $isPrimary, $sortOrder);
     }
 
     public static function deleteImageRecords(string $resourceType, int $resourceId): void
@@ -111,6 +150,15 @@ final class ResourceImageHelper
                 @unlink($fullPath);
             }
         }
+    }
+
+    public static function deleteImageResourceLinks(string $resourceType, int $resourceId): void
+    {
+        Resources::deleteAll([
+            'resource_type' => $resourceType,
+            'resource_id' => $resourceId,
+            'type' => 'image',
+        ]);
     }
 
     public static function logMissingMultipartImage(?UploadedFile $imageFile): void
@@ -157,7 +205,8 @@ final class ResourceImageHelper
         string $resourceType,
         int $resourceId,
         Files $file,
-        bool $isPrimary
+        bool $isPrimary,
+        int $sortOrder = 0
     ): Resources {
         $resource = new Resources();
         $resource->file_id = $file->id;
@@ -166,7 +215,7 @@ final class ResourceImageHelper
         $resource->type = 'image';
         $resource->title = $file->original_name;
         $resource->alt_text = null;
-        $resource->sort_order = 0;
+        $resource->sort_order = $sortOrder;
         $resource->is_primary = $isPrimary ? 1 : 0;
 
         if (!$resource->save()) {

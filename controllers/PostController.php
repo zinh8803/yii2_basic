@@ -2,7 +2,7 @@
 
 namespace app\controllers;
 
-use app\helpers\ResourceImageHelper;
+use app\components\ResourceImageHelper;
 use app\models\forms\Post\CreatePostForm;
 use app\models\forms\Post\UpdatePostForm;
 use app\models\forms\Post\UpdatePostStatusForm;
@@ -57,7 +57,7 @@ class PostController extends BaseController
         if ($form->validate()) {
             $post = new Posts();
             $post->setAttributes($form->attributes, false);
-
+            $post->published_at = $form->status === 'published' ? time() : null;
             $transaction = Yii::$app->db->beginTransaction();
             try {
                 if (!$post->save()) {
@@ -67,9 +67,7 @@ class PostController extends BaseController
 
                 $this->syncPostProducts($post, $this->normalizeIdArray($form->products));
                 $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
-                if ($form->imageFile instanceof UploadedFile) {
-                    ResourceImageHelper::attachImage('post', $post->id, $post->user_id, 'uploads/posts', $form->imageFile, $form);
-                }
+                $this->attachPostImageFromForm($post, $form);
                 $transaction->commit();
                 return $this->json(true, $post, 'Post created successfully', 201);
             } catch (\Throwable $e) {
@@ -129,10 +127,7 @@ class PostController extends BaseController
             if ($form->tag_ids !== null) {
                 $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
             }
-            if ($form->imageFile instanceof UploadedFile) {
-                ResourceImageHelper::markImagesNonPrimary('post', $post->id);
-                ResourceImageHelper::attachImage('post', $post->id, $post->user_id, 'uploads/posts', $form->imageFile, $form);
-            }
+            $this->attachPostImageFromForm($post, $form, true);
             $transaction->commit();
             return $this->json(true, $post, 'Post updated successfully');
         } catch (\Throwable $e) {
@@ -246,6 +241,36 @@ class PostController extends BaseController
         }
 
         return array_keys($ids);
+    }
+
+    private function attachPostImageFromForm(
+        Posts $post,
+        CreatePostForm|UpdatePostForm $form,
+        bool $replacePrimary = false
+    ): void {
+        if (
+            !$form->imageFile instanceof UploadedFile
+            && empty($form->image_file_id)
+            && empty($form->image_resource_id)
+        ) {
+            return;
+        }
+
+        if ($replacePrimary) {
+            ResourceImageHelper::markImagesNonPrimary('post', $post->id);
+        }
+
+        if ($form->imageFile instanceof UploadedFile) {
+            ResourceImageHelper::attachImage('post', $post->id, $post->user_id, 'uploads/posts', $form->imageFile, $form);
+            return;
+        }
+
+        if (!empty($form->image_resource_id)) {
+            ResourceImageHelper::attachExistingImageResource('post', $post->id, (int) $form->image_resource_id);
+            return;
+        }
+
+        ResourceImageHelper::attachExistingImageFile('post', $post->id, (int) $form->image_file_id);
     }
 
     private function syncPostProducts(Posts $post, array $productIds): void
