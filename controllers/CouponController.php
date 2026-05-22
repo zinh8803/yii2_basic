@@ -128,5 +128,22 @@ class CouponController extends BaseController
         return $this->json(false, null, 'Failed to delete coupon', 500);
     }
 
-
+    public function actionCheckValid($code)
+    {
+        $model = CouponResponse::findOne(['code' => $code, 'is_active' => 1]);
+        if (!$model) {
+            return $this->json(false, null, 'Invalid coupon code', 404);
+        }
+        if ($model->used_count >= $model->max_usage) {
+            return $this->json(false, null, 'Coupon usage limit reached', 422);
+        }
+        $currentTime = time();
+        if ($model->starts_at > $currentTime) {
+            return $this->json(false, null, 'Coupon not active yet', 422);
+        }
+        if ($model->expires_at < $currentTime) {
+            return $this->json(false, null, 'Coupon has expired', 422);
+        }
+        return $this->json(true, $model, 'Coupon is valid');
+    }
 }

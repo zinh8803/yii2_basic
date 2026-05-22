@@ -21,6 +21,8 @@ class ProductResponse extends Products
             'sale_price' => fn() => $this->productVariants[0]->sale_price ?? null,
             'description',
             'status',
+            'rating_avg',
+            'rating_count',
             'created_at' => function () {
                 return date('Y-m-d H:i:s', $this->created_at);
             },

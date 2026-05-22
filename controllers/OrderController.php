@@ -15,6 +15,7 @@ use app\models\Products;
 use app\models\ProductVariants;
 use app\models\response\Order\OrderResponse;
 use app\models\search\OrderSearch;
+use app\models\Users;
 use Yii;
 use yii\web\NotFoundHttpException;
 
@@ -527,6 +528,21 @@ class OrderController extends BaseController
             foreach ($messages as $message) {
                 $form->addError($attribute, $message);
             }
+        }
+    }
+
+    public function actionMyOrders($userId)
+    {
+        $orders = OrderResponse::find()
+            ->with(['orderItems', 'payments'])
+            ->where(['user_id' => $userId])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->all();
+        $exists = Users::find()->where(['id' => $userId])->exists();
+        if (!$exists) {
+            return $this->json(false, null, 'User not found', 404);
+        } else {
+            return $this->json(true, $orders, 'User orders retrieved successfully');
         }
     }
 }

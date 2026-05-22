@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\models\forms\Review\CreateReviewForm;
 use app\models\forms\Review\UpdateApprovedReviewForm;
 use app\models\OrderItems;
+use app\models\Products;
 use app\models\Reviews;
 use app\models\search\ReviewSearch;
 use Yii;
@@ -32,38 +33,59 @@ class ReviewController extends BaseController
     public function actionCreate()
     {
         $form = new CreateReviewForm();
-
         $form->load($this->request->bodyParams, '');
 
         if (!$form->validate()) {
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
+
         $hasPurchased = OrderItems::find()
             ->joinWith('order')
-            ->where(['orders.user_id' => $form->user_id, 'order_items.product_id' => $form->product_id])
+            ->where([
+                'orders.user_id' => $form->user_id,
+                'order_items.product_id' => $form->product_id,
+            ])
             ->exists();
+
         if (!$hasPurchased) {
-            return $this->json(
-                false,
-                null,
-                'You must purchase this product before reviewing.'
-            );
+            return $this->json(false, null, 'You must purchase this product before reviewing.', 403);
         }
 
-        $model = new Reviews();
-        $model->setAttributes($form->attributes, false);
+        $transaction = Yii::$app->db->beginTransaction();
 
         try {
-            if ($model->save()) {
-                return $this->json(true, $model, 'Review created successfully', 201);
+            $model = new Reviews();
+            $model->setAttributes($form->attributes, false);
+
+            if (!$model->save()) {
+                $transaction->rollBack();
+                return $this->json(false, $model->errors, 'Validation failed', 422);
             }
+
+            $stats = Reviews::find()
+                ->select([
+                    'rating_avg' => 'AVG(rating)',
+                    'rating_count' => 'COUNT(*)',
+                ])
+                ->where(['product_id' => $form->product_id])
+                ->asArray()
+                ->one();
+
+            Products::updateAll([
+                'rating_avg' => round((float) $stats['rating_avg'], 1),
+                'rating_count' => (int) $stats['rating_count'],
+            ], [
+                'id' => $form->product_id,
+            ]);
+
+            $transaction->commit();
+
+            return $this->json(true, $model, 'Review created successfully', 201);
         } catch (\Throwable $exception) {
+            $transaction->rollBack();
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            return $this->json(false, null, $exception->getMessage() , 500);
         }
-
-        return $this->json(false, $model->errors, 'Validation failed', 422);
-
     }
 
     public function actionUpdate($id)
