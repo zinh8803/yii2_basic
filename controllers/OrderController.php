@@ -122,40 +122,62 @@ class OrderController extends BaseController
         $form->load($this->request->bodyParams, '');
 
         $resolvedId = $id ?? $form->id;
+
         if ($resolvedId === null) {
             return $this->json(false, null, 'Order id is required', 422);
         }
 
         $model = OrderResponse::findOne(['id' => $resolvedId]);
+
         if (!$model) {
             return $this->json(false, null, 'Order not found', 404);
         }
+
         $form->id = $resolvedId;
+
         if ($form->status === null || $form->status === '') {
             $form->status = $model->status;
+        }
+
+        if ($form->payment_status === null || $form->payment_status === '') {
             $form->payment_status = $model->payment_status;
         }
 
         if (!$form->validate()) {
             return $this->json(false, $form->errors, 'Validation failed', 422);
         }
-        $model->setAttributes([
-            'status' => $form->status,
-            'payment_status' => $form->payment_status,
-        ], false);
-        Payments::updateAll(['status' => $form->payment_status, 'payment_status' => $form->payment_status], ['order_id' => $model->id]);
+
+        $transaction = Yii::$app->db->beginTransaction();
+
         try {
-            if ($model->save()) {
-                return $this->json(true, $model, 'Order status updated successfully');
+            $model->setAttributes([
+                'status' => $form->status,
+                'payment_status' => $form->payment_status,
+            ], false);
+
+            if (!$model->save()) {
+                $transaction->rollBack();
+                return $this->json(false, $model->errors, 'Validation failed', 422);
             }
+
+            Payments::updateAll(
+                [
+                    'status' => $form->payment_status,
+                    'payment_status' => $form->payment_status,
+                ],
+                ['order_id' => $model->id]
+            );
+
+            $transaction->commit();
+
+            return $this->json(true, $model, 'Order status updated successfully');
         } catch (\Throwable $exception) {
+            $transaction->rollBack();
             Yii::error($exception->getMessage(), __METHOD__);
+
             return $this->json(false, null, 'Internal server error', 500);
         }
-
-        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
-
 
     protected function findModel($id)
     {
