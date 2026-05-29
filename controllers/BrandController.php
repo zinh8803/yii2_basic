@@ -2,106 +2,98 @@
 
 namespace app\controllers;
 
-use app\models\Brands;
-use app\models\forms\Brand\CreateBrandForm;
+use app\models\Brand;
+use app\models\forms\brand\BrandForm;
 use app\models\forms\Brand\UpdateBrandForm;
-use app\models\response\Brand\BrandResponse;
+use app\models\response\BrandResponse;
 use app\models\search\BrandSearch;
 use Yii;
 use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
 
 class BrandController extends BaseController
 {
-    public $modelClass = 'app\models\Brands';
     public function actionIndex()
     {
         $searchModel = new BrandSearch();
         $dataProvider = $searchModel->search($this->request->queryParams, '', false);
-        $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, 'Brands retrieved successfully');
+        return $this->successPaginate($dataProvider, 'Brands retrieved successfully');
     }
 
     public function actionView($id)
     {
-        $query = BrandResponse::find()->where(['id' => $id])->active();
-        $model = $query->one();
-        if (!$model) {
-            return $this->json(false, null, 'Brand not found', 404);
-        }
-        return $this->json(true, $model, 'Brand retrieved successfully');
+        $model = $this->findModel($id);
+        return $this->formatJson(true, $model, 'Brand retrieved successfully');
     }
 
     public function actionCreate()
     {
-        $form = new CreateBrandForm();
+        $form = new BrandForm();
+        $form->scenario = BrandForm::SCENARIO_CREATE;
+
         $form->load($this->request->bodyParams, '');
         if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
+            return $this->formatJson(false, $form->errors, 'Validation failed', self::HTTP_BAD_REQUEST);
         }
-        $model = new Brands();
+        $model = new Brand();
         $model->setAttributes($form->attributes, false);
         try {
             if ($model->save()) {
-                return $this->json(true, $model, 'Brand created successfully', 201);
+                return $this->formatJson(true, $model, 'Brand created successfully', self::HTTP_CREATED);
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            throw new NotFoundHttpException($exception->getMessage());
         }
-
-        return $this->json(false, $model->errors, 'Validation failed', 422);
     }
 
     public function actionUpdate($id)
     {
-        $model = Brands::findOne($id);
-        if (!$model) {
-            return $this->json(false, null, 'Brand not found', 404);
-        }
-
-        $form = new UpdateBrandForm();
+        $model = $this->findModel($id);
+        $form = new BrandForm();
         $form->id = $id;
         $data = $this->request->bodyParams;
         if (empty($data)) {
             $data = $this->request->post();
         }
+        $form->scenario = BrandForm::SCENARIO_UPDATE;
         $form->load($data, '');
-
         if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
+            return $this->formatJson(false, $form->errors, 'Validation failed', self::HTTP_BAD_REQUEST);
         }
-
         try {
             $model->setAttributes($form->attributes, false);
-
             if ($model->save()) {
-                return $this->json(true, $model, 'Brand updated successfully');
+                return $this->formatJson(true, $model, 'Brand updated successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            throw new NotFoundHttpException($exception->getMessage());
         }
 
-        return $this->json(false, $model->errors, 'Validation failed', 422);
+        return $this->formatJson(false, null, 'Failed to update brand', self::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     public function actionDelete($id)
     {
-        $model = Brands::findOne($id);
-        if (!$model) {
-            return $this->json(false, null, 'Brand not found', 404);
-        }
+        $model = $this->findModel($id);
         try {
             if ($model->delete()) {
-                return $this->json(true, null, 'Brand deleted successfully');
+                return $this->formatJson(true, null, 'Brand deleted successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            return $this->formatJson(false, null, 'Internal server error', self::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        return $this->json(false, null, 'Failed to delete brand', 500);
+        return $this->formatJson(false, null, 'Failed to delete brand', self::HTTP_INTERNAL_SERVER_ERROR);
     }
 
+    public function findModel($id)
+    {
+        $model = BrandForm::findOne($id);
+        if (!isset($model)) {
+            throw new NotFoundHttpException('Brand not found');
+        }
+        return $model;
+    }
 }

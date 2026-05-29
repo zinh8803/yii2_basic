@@ -9,9 +9,6 @@ use Yii;
  */
 class UserController extends BaseController
 {
-    public $modelClass = 'app\\models\\User';
-
-
     public function actionLogin()
     {
         $body = Yii::$app->request->bodyParams;

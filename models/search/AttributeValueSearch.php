@@ -2,11 +2,11 @@
 
 namespace app\models\search;
 
-use app\models\AttributeValues;
+use app\models\AttributeValue;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-class AttributeValueSearch extends AttributeValues
+class AttributeValueSearch extends AttributeValue
 {
     public $keyword;
 
@@ -25,7 +25,7 @@ class AttributeValueSearch extends AttributeValues
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = AttributeValues::find()
+        $query = AttributeValue::find()
             ->orderBy(['sort_order' => SORT_ASC]);
         $dataProvider = new ActiveDataProvider(['query' => $query]);
 

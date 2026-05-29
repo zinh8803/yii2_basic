@@ -14,8 +14,6 @@ use yii\filters\VerbFilter;
 
 class ReviewController extends BaseController
 {
-    public $modelClass = 'app\models\Reviews';
-
     public function actionIndex()
     {
         $searchModel = new ReviewSearch();

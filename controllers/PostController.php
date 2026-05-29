@@ -18,7 +18,6 @@ use yii\web\UploadedFile;
 
 class PostController extends BaseController
 {
-    public $modelClass = 'app\models\Posts';
     public function actionIndex()
     {
         $searchModel = new PostSearch();

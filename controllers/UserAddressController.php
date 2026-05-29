@@ -12,8 +12,6 @@ use yii\filters\VerbFilter;
 
 class UserAddressController extends BaseController
 {
-    public $modelClass = 'app\models\UserAddresses';
-
     public function actionIndex()
     {
         $searchModel = new UserAddressSearch();

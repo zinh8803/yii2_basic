@@ -15,7 +15,6 @@ use yii\web\UploadedFile;
 
 class ProductController extends BaseController
 {
-    public $modelClass = 'app\models\Products';
     public function actionIndex()
     {
         $searchModel = new ProductSearch();

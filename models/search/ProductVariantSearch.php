@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\ProductVariants;
-use app\models\response\ProductVariant\ProductVariantResponse;
+use app\models\ProductVariant;
+use app\models\response\ProductVariantResponse;
 
 /**
  * ProductVariantSearch represents the model behind the search form of `app\models\ProductVariants`.
  */
-class ProductVariantSearch extends ProductVariants
+class ProductVariantSearch extends ProductVariant
 {
     public $keyword;
     /**
@@ -50,6 +50,9 @@ class ProductVariantSearch extends ProductVariants
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

@@ -1,10 +1,9 @@
 <?php
 namespace app\models\forms\Brand;
 
-use app\models\Brands;
-use yii\base\Model;
+use app\models\Brand;
 
-class CreateBrandForm extends Model
+class CreateBrandForm extends Brand
 {
     public $name;
     public $slug;
@@ -14,8 +13,8 @@ class CreateBrandForm extends Model
     public function rules()
     {
         return [
-            [['name'], 'unique', 'targetClass' => Brands::class, 'targetAttribute' => 'name',],
-            [['slug'], 'unique', 'targetClass' => Brands::class, 'targetAttribute' => 'slug'],
+            [['name'], 'unique', 'targetClass' => Brand::class, 'targetAttribute' => 'name',],
+            [['slug'], 'unique', 'targetClass' => Brand::class, 'targetAttribute' => 'slug'],
             [['name'], 'required'],
             [['description'], 'string'],
             [['status'], 'integer'],

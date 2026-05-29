@@ -21,8 +21,6 @@ use yii\web\NotFoundHttpException;
 
 class OrderController extends BaseController
 {
-    public $modelClass = 'app\models\Orders';
-
     public function actionIndex()
     {
         Yii::info($this->request->queryParams, 'debug');

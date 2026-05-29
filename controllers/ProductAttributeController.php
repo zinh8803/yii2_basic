@@ -15,7 +15,6 @@ use yii\filters\VerbFilter;
 
 class ProductAttributeController extends BaseController
 {
-    public $modelClass = 'app\models\ProductAttributes';
     public function actionIndex()
     {
         $searchModel = new ProductAttributeSearch();

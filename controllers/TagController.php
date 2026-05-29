@@ -11,7 +11,6 @@ use Yii;
 
 class TagController extends BaseController
 {
-    public $modelClass = 'app\models\Tags';
     public function actionIndex()
     {
         $searchModel = new TagSearch();

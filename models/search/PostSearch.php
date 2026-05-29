@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Posts;
-use app\models\response\Post\PostResponse;
+use app\models\Post;
+use app\models\response\PostResponse;
 
 /**
  * PostSearch represents the model behind the search form of `app\models\Posts`.
  */
-class PostSearch extends Posts
+class PostSearch extends Post
 {
     public $keyword;
     /**
@@ -52,6 +52,9 @@ class PostSearch extends Posts
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

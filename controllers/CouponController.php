@@ -11,7 +11,6 @@ use Yii;
 
 class CouponController extends BaseController
 {
-    public $modelClass = 'app\models\Coupons';
     public function actionIndex()
     {
         $searchModel = new CouponSearch();

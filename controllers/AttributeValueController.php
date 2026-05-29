@@ -9,8 +9,6 @@ use yii\web\NotFoundHttpException;
 
 class AttributeValueController extends BaseController
 {
-    public $modelClass = 'app\\models\\AttributeValues';
-
     public function actionIndex()
     {
         $searchModel = new AttributeValueSearch();

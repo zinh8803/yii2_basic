@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Categories;
-use app\models\response\Category\CategoryResponse;
+use app\models\Category;
+use app\models\response\CategoryResponse;
 
 /**
- * CategorySearch represents the model behind the search form of `app\models\Categories`.
+ * CategorySearch represents the model behind the search form of `app\models\Category`.
  */
-class CategorySearch extends Categories
+class CategorySearch extends Category
 {
     public $keyword;
     /**
@@ -54,6 +54,9 @@ class CategorySearch extends Categories
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

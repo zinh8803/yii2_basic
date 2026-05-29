@@ -4,36 +4,33 @@ namespace app\controllers;
 
 use Yii;
 use yii\data\ActiveDataProvider;
-use yii\rest\ActiveController;
+use yii\rest\Controller;
 
-class BaseController extends ActiveController
+class BaseController extends Controller
 {
-    public function actions()
-    {
-        $actions = parent::actions();
-
-        unset($actions['index']);
-        unset($actions['view']);
-        unset($actions['create']);
-        unset($actions['update']);
-        unset($actions['delete']);
-
-        return $actions;
-    }
-    public function json($status = true, $data = [], $message = "", $code = 200): array
+    const HTTP_OK = 200;
+    const HTTP_CREATED = 201;
+    const HTTP_BAD_REQUEST = 400;
+    const HTTP_UNAUTHORIZED = 401;
+    const HTTP_FORBIDDEN = 403;
+    const HTTP_NOT_FOUND = 404;
+    const HTTP_INTERNAL_SERVER_ERROR = 500;
+    public function formatJson($status = true, $data = [], $message = "", $code = 200): array
     {
         Yii::$app->response->statusCode = $code;
 
         return [
+            "code" => $code,
             "status" => $status,
             "data" => $data,
             "message" => $message,
-            "code" => $code
+            "error" => null,
         ];
     }
-    protected function successPaginate(ActiveDataProvider $dataProvider)
+    protected function successPaginate(ActiveDataProvider $dataProvider, string $message = 'Data retrieved successfully', $statusCode = 200): array
     {
         return [
+            'code' => $statusCode,
             'status' => true,
             'data' => $dataProvider->getModels(),
             '_meta' => [
@@ -42,40 +39,42 @@ class BaseController extends ActiveController
                 'currentPage' => $dataProvider->pagination->getPage() + 1,
                 'perPage' => $dataProvider->pagination->getPageSize(),
             ],
+            'message' => $message,
+            'error' => null,
         ];
     }
-    public function paginate($query, int $defaultLimit = 10): array
-    {
-        $page = (int) Yii::$app->request->get('page', 1);
-        $limit = (int) Yii::$app->request->get('limit', $defaultLimit);
-        $maxLimit = 100;
+    // public function paginate($query, int $defaultLimit = 10): array
+    // {
+    //     $page = (int) Yii::$app->request->get('page', 1);
+    //     $limit = (int) Yii::$app->request->get('limit', $defaultLimit);
+    //     $maxLimit = 100;
 
-        if ($page < 1) {
-            $page = 1;
-        }
+    //     if ($page < 1) {
+    //         $page = 1;
+    //     }
 
-        if ($limit < 1) {
-            $limit = $defaultLimit;
-        }
-        if ($limit > $maxLimit) {
-            $limit = $maxLimit;
-        }
+    //     if ($limit < 1) {
+    //         $limit = $defaultLimit;
+    //     }
+    //     if ($limit > $maxLimit) {
+    //         $limit = $maxLimit;
+    //     }
 
-        $total = (clone $query)->count();
+    //     $total = (clone $query)->count();
 
-        $data = $query
-            ->offset(($page - 1) * $limit)
-            ->limit($limit)
-            ->all();
+    //     $data = $query
+    //         ->offset(($page - 1) * $limit)
+    //         ->limit($limit)
+    //         ->all();
 
-        return [
-            'items' => $data,
-            'pagination' => [
-                'total' => (int) $total,
-                'page' => $page,
-                'limit' => $limit,
-                'total_page' => (int) ceil($total / $limit),
-            ],
-        ];
-    }
+    //     return [
+    //         'items' => $data,
+    //         'pagination' => [
+    //             'total' => (int) $total,
+    //             'page' => $page,
+    //             'limit' => $limit,
+    //             'total_page' => (int) ceil($total / $limit),
+    //         ],
+    //     ];
+    // }
 }

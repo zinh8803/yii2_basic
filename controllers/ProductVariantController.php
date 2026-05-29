@@ -13,8 +13,6 @@ use yii\base\Model;
 
 class ProductVariantController extends BaseController
 {
-    public $modelClass = 'app\models\ProductVariants';
-
     public function actionIndex()
     {
         $searchModel = new ProductVariantSearch();

@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Coupons;
-use app\models\response\Coupon\CouponResponse;
+use app\models\Coupon;
+use app\models\response\CouponResponse;
 
 /**
- * CouponSearch represents the model behind the search form of `app\models\Coupons`.
+ * CouponSearch represents the model behind the search form of `app\models\Coupon`.
  */
-class CouponSearch extends Coupons
+class CouponSearch extends Coupon
 {
     public $keyword;
     /**
@@ -50,6 +50,9 @@ class CouponSearch extends Coupons
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

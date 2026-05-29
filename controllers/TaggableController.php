@@ -10,12 +10,6 @@ use yii\filters\VerbFilter;
 
 class TaggableController extends BaseController
 {
-    public $modelClass = 'app\models\Taggables';
-
-    /**
-     * @inheritDoc
-     */
-
     public function actionIndex()
     {
         $searchModel = new TaggableSearch();

@@ -11,8 +11,6 @@ use Yii;
 
 class CategoryController extends BaseController
 {
-    public $modelClass = 'app\models\Categories';
-
     public function actionIndex()
     {
         $searchModel = new CategorySearch();

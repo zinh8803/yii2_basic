@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Brands;
-use app\models\response\Brand\BrandResponse;
+use app\models\Brand;
+use app\models\response\BrandResponse;
 
 /**
- * BrandSearch represents the model behind the search form of `app\models\Brands`.
+ * BrandSearch represents the model behind the search form of `app\models\Brand`.
  */
-class BrandSearch extends Brands
+class BrandSearch extends Brand
 {
     public $keyword;
     /**
@@ -53,6 +53,9 @@ class BrandSearch extends Brands
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

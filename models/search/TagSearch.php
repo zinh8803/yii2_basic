@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Tags;
-use app\models\response\Tag\TagResponse;
+use app\models\Tag;
+use app\models\response\TagResponse;
 
 /**
  * TagSearch represents the model behind the search form of `app\models\Tags`.
  */
-class TagSearch extends Tags
+class TagSearch extends Tag
 {
     /**
      * {@inheritdoc}
@@ -48,6 +48,9 @@ class TagSearch extends Tags
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

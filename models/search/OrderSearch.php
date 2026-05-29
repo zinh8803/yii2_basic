@@ -2,12 +2,12 @@
 
 namespace app\models\search;
 
-use app\models\Orders;
-use app\models\response\Order\OrderResponse;
+use app\models\Order;
+use app\models\response\OrderResponse;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-class OrderSearch extends Orders
+class OrderSearch extends Order
 {
     public $keyword;
 
@@ -28,7 +28,12 @@ class OrderSearch extends Orders
     public function search($params, $formName = ''): ActiveDataProvider
     {
         $query = OrderResponse::find()->with(['orderItems']);
-        $dataProvider = new ActiveDataProvider(['query' => $query]);
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
+        ]);
 
         $this->load($params, $formName);
         if (!$this->validate()) {

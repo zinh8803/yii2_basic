@@ -7,8 +7,6 @@ use Yii;
 
 class CalculateController extends BaseController
 {
-    public $modelClass = 'yii\\base\\Model';
-
     public function actionTotal()
     {
         $body = Yii::$app->request->bodyParams;

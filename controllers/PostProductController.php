@@ -10,7 +10,6 @@ use Yii;
 
 class PostProductController extends BaseController
 {
-    public $modelClass = 'app\models\PostProducts';
     public function actionIndex()
     {
         $searchModel = new PostProductSearch();

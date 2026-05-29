@@ -13,7 +13,6 @@ use yii\web\NotFoundHttpException;
 
 class CartController extends BaseController
 {
-    public $modelClass = 'app\models\Carts';
     // public function actionIndex()
     // {
     //     $query = Carts::find();

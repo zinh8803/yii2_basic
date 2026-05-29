@@ -4,13 +4,13 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\PostProducts;
-use app\models\response\PostProduct\PostProductResponse;
+use app\models\PostProduct;
+use app\models\response\PostProductResponse;
 
 /**
  * PostProductSearch represents the model behind the search form of `app\models\PostProducts`.
  */
-class PostProductSearch extends PostProducts
+class PostProductSearch extends PostProduct
 {
     /**
      * {@inheritdoc}
@@ -48,6 +48,9 @@ class PostProductSearch extends PostProducts
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

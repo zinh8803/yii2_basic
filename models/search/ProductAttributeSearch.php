@@ -2,12 +2,12 @@
 
 namespace app\models\search;
 
-use app\models\ProductAttributes;
-use app\models\response\ProductAttribute\ProductAttributeResponse;
+use app\models\ProductAttribute;
+use app\models\response\ProductAttributeResponse;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-class ProductAttributeSearch extends ProductAttributes
+class ProductAttributeSearch extends ProductAttribute
 {
     public $keyword;
 
@@ -28,7 +28,12 @@ class ProductAttributeSearch extends ProductAttributes
     {
         $query = ProductAttributeResponse::find()
             ->with(['attributeValues']);
-        $dataProvider = new ActiveDataProvider(['query' => $query]);
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
+        ]);
 
         $this->load($params, $formName);
         if (!$this->validate()) {
