@@ -12,7 +12,10 @@ class CategoryResponse extends Category
             'id',
             'name',
             'slug',
-            'children',
+            //   'children',
+            'children' => function ($model) {
+                return $model->children;
+            },
             'status',
             'created_at' => function () {
                 return date('Y-m-d H:i:s', $this->created_at);

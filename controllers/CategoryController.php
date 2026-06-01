@@ -3,11 +3,12 @@
 namespace app\controllers;
 
 use app\models\Categories;
-use app\models\forms\Category\CreateCategoryForm;
-use app\models\forms\Category\UpdateCategoryForm;
-use app\models\response\Category\CategoryResponse;
+use app\models\Category;
+use app\models\forms\category\CategoryForm;
 use app\models\search\CategorySearch;
 use Yii;
+use yii\web\BadRequestHttpException;
+use yii\web\NotFoundHttpException;
 
 class CategoryController extends BaseController
 {
@@ -15,95 +16,90 @@ class CategoryController extends BaseController
     {
         $searchModel = new CategorySearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, 'Categories retrieved successfully');
+        return $this->successPaginate($dataProvider, 'Categories retrieved successfully');
     }
 
     public function actionView($id)
     {
-        $query = CategoryResponse::find()
-            ->where(['id' => $id])
-            ->with(['children']);
-        $model = $query->one();
-        if (!$model) {
-            return $this->json(false, null, 'Category not found', 404);
-        }
-        return $this->json(true, $model, 'Category retrieved successfully');
+        $model = $this->findModel($id);
+        return $this->formatJson(true, $model, 'Category retrieved successfully');
     }
 
     public function actionCreate()
     {
-        $form = new CreateCategoryForm();
+        $form = new CategoryForm([
+            'scenario' => CategoryForm::SCENARIO_CREATE,
+        ]);
         $form->load($this->request->bodyParams, '');
 
         if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
         }
 
-        $model = new Categories();
+        $model = new Category();
         $model->setAttributes($form->attributes, false);
 
         try {
-            if ($model->save()) {
-                return $this->json(true, $model, 'Category created successfully', 201);
+            if ($model->save(false)) {
+                return $this->formatJson(true, $model, 'Category created successfully', 201);
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            throw new NotFoundHttpException($exception->getMessage());
         }
-
-        return $this->json(false, $model->errors, 'Validation failed', 422);
-
     }
 
     public function actionUpdate($id)
     {
-        $model = Categories::findOne($id);
-        if (!$model) {
-            return $this->json(false, null, 'Category not found', 404);
-        }
-
-        $form = new UpdateCategoryForm();
+        $model = $this->findModel($id);
+        $form = new CategoryForm([
+            'scenario' => CategoryForm::SCENARIO_UPDATE,
+        ]);
         $form->id = $id;
-
-        $data = $this->request->bodyParams;
-        if (empty($data)) {
-            $data = $this->request->post();
-        }
-        $form->load($data, '');
+        $form->load($this->request->bodyParams, '');
 
         if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
         }
-        $model->setAttributes($form->attributes, false);
+        $model->setAttributes($form->getAttributes(['name', 'parent_id', 'status']), false);
         try {
-            if ($model->save()) {
-                return $this->json(true, $model, 'Category updated successfully');
+            if ($model->save(false)) {
+                return $this->formatJson(true, $model, 'Category updated successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            throw new NotFoundHttpException($exception->getMessage());
         }
 
-        return $this->json(false, $model->errors, 'Validation failed', 422);
+        return $this->formatJson(false, $model->errors, 'Validation failed', 422);
     }
 
     public function actionDelete($id)
     {
-        $model = Categories::findOne($id);
-        if (!$model) {
-            return $this->json(false, null, 'Category not found', 404);
+        $model = $this->findModel($id);
+        if ($model->hasChildren()) {
+            return $this->formatJson(false, null, 'Cannot delete category with active subcategories', 400);
         }
         try {
             if ($model->delete()) {
-                return $this->json(true, null, 'Category deleted successfully');
+                return $this->formatJson(true, null, 'Category deleted successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            throw new BadRequestHttpException($exception->getMessage());
         }
+    }
 
-        return $this->json(false, null, 'Failed to delete category', 500);
+    public function findModel($id)
+    {
+        $model = CategoryForm::find()
+            ->where(['id' => $id])
+            ->tree()
+            ->one();
+        if (!$model) {
+            throw new NotFoundHttpException('Category not found');
+        }
+        return $model;
     }
 
 }

@@ -38,7 +38,7 @@ class Category extends ActiveRecord
             [['parent_id'], 'default', 'value' => null],
             [['status'], 'default', 'value' => 1],
             [['parent_id', 'status'], 'integer'],
-            [['name', 'slug'], 'unique'],
+            //  [['name', 'slug'], 'unique'],
             [['name', 'slug'], 'string', 'max' => 255],
             [['parent_id'], 'exist', 'skipOnError' => true, 'targetClass' => Category::class, 'targetAttribute' => ['parent_id' => 'id']],
         ];
@@ -91,16 +91,6 @@ class Category extends ActiveRecord
     public function getParent()
     {
         return $this->hasOne(Category::class, ['id' => 'parent_id']);
-    }
-
-    /**
-     * Gets query for [[Children]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getChildren()
-    {
-        return $this->hasMany(Category::class, ['parent_id' => 'id'])->andWhere(['status' => 1]);
     }
 
     /**

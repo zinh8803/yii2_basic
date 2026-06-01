@@ -25,4 +25,18 @@ class Category extends base\Category
         ];
     }
 
+    /**
+     * Gets query for [[Children]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getChildren()
+    {
+        return $this->hasMany(Category::class, ['parent_id' => 'id'])->andWhere(['status' => 1]);
+    }
+
+    public function hasChildren()
+    {
+        return $this->getChildren()->exists();
+    }
 }

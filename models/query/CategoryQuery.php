@@ -20,4 +20,13 @@ class CategoryQuery extends ActiveQuery
     {
         return $this->andWhere(['parent_id' => $parentId]);
     }
+    public function tree()
+    {
+        return $this->with([
+            'children' => function ($query) {
+                $query->with('children');
+            },
+            'parent',
+        ]);
+    }
 }

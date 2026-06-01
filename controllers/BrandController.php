@@ -4,8 +4,6 @@ namespace app\controllers;
 
 use app\models\Brand;
 use app\models\forms\brand\BrandForm;
-use app\models\forms\Brand\UpdateBrandForm;
-use app\models\response\BrandResponse;
 use app\models\search\BrandSearch;
 use Yii;
 use yii\web\NotFoundHttpException;
@@ -27,9 +25,9 @@ class BrandController extends BaseController
 
     public function actionCreate()
     {
-        $form = new BrandForm();
-        $form->scenario = BrandForm::SCENARIO_CREATE;
-
+        $form = new BrandForm([
+            'scenario' => BrandForm::SCENARIO_CREATE,
+        ]);
         $form->load($this->request->bodyParams, '');
         if (!$form->validate()) {
             return $this->formatJson(false, $form->errors, 'Validation failed', self::HTTP_BAD_REQUEST);
@@ -37,7 +35,7 @@ class BrandController extends BaseController
         $model = new Brand();
         $model->setAttributes($form->attributes, false);
         try {
-            if ($model->save()) {
+            if ($model->save(false)) {
                 return $this->formatJson(true, $model, 'Brand created successfully', self::HTTP_CREATED);
             }
         } catch (\Throwable $exception) {
@@ -49,20 +47,17 @@ class BrandController extends BaseController
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
-        $form = new BrandForm();
+        $form = new BrandForm([
+            'scenario' => BrandForm::SCENARIO_UPDATE,
+        ]);
         $form->id = $id;
-        $data = $this->request->bodyParams;
-        if (empty($data)) {
-            $data = $this->request->post();
-        }
-        $form->scenario = BrandForm::SCENARIO_UPDATE;
-        $form->load($data, '');
+        $form->load($this->request->bodyParams, '');
         if (!$form->validate()) {
             return $this->formatJson(false, $form->errors, 'Validation failed', self::HTTP_BAD_REQUEST);
         }
         try {
-            $model->setAttributes($form->attributes, false);
-            if ($model->save()) {
+            $model->setAttributes($form->getAttributes(['name', 'status']), false);
+            if ($model->save(false)) {
                 return $this->formatJson(true, $model, 'Brand updated successfully');
             }
         } catch (\Throwable $exception) {

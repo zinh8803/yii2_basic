@@ -48,7 +48,7 @@ class CategorySearch extends Category
         $query = CategoryResponse::find()
             ->roots()
             ->active()
-            ->with(['children']);
+            ->tree();
 
         // add conditions that should always apply here
 
