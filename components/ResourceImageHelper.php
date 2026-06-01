@@ -2,8 +2,8 @@
 
 namespace app\components;
 
-use app\models\Files;
-use app\models\Resources;
+use app\models\File;
+use app\models\Resource;
 use Yii;
 use yii\base\Component;
 use yii\base\Model;
@@ -12,6 +12,9 @@ use yii\web\UploadedFile;
 
 final class ResourceImageHelper extends Component
 {
+    private const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'];
+    private const MAX_IMAGE_SIZE = 5242880;
+
     public static function getUploadedImageFile(Model $form, array $fieldNames = ['imageFile', 'image_file', 'image', 'file']): ?UploadedFile
     {
         $files = UploadedFile::getInstances($form, 'imageFile');
@@ -28,9 +31,24 @@ final class ResourceImageHelper extends Component
 
     public static function getUploadedImageFiles(Model $form, array $fieldNames = ['imageFiles', 'image_files', 'images', 'files', 'imageFile']): array
     {
-        $files = UploadedFile::getInstances($form, 'imageFiles');
+        $files = [];
+        $seen = [];
+        foreach (UploadedFile::getInstances($form, 'imageFiles') as $file) {
+            $key = self::uploadedFileKey($file);
+            if (!isset($seen[$key])) {
+                $files[] = $file;
+                $seen[$key] = true;
+            }
+        }
+
         foreach ($fieldNames as $fieldName) {
-            array_push($files, ...UploadedFile::getInstancesByName($fieldName));
+            foreach (UploadedFile::getInstancesByName($fieldName) as $file) {
+                $key = self::uploadedFileKey($file);
+                if (!isset($seen[$key])) {
+                    $files[] = $file;
+                    $seen[$key] = true;
+                }
+            }
         }
 
         return $files;
@@ -45,27 +63,21 @@ final class ResourceImageHelper extends Component
         Model $form,
         bool $isPrimary = true,
         int $sortOrder = 0
-    ): Resources {
-        $uploadFolder = trim(str_replace('\\', '/', $uploadFolder), '/');
-        $uploadDir = Yii::getAlias('@webroot/' . str_replace('/', DIRECTORY_SEPARATOR, $uploadFolder));
-        FileHelper::createDirectory($uploadDir);
-
-        $fileName = Yii::$app->security->generateRandomString(16) . '.' . $imageFile->extension;
-        $relativePath = $uploadFolder . '/' . $fileName;
-        $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-        if (!$imageFile->saveAs($fullPath)) {
-            $form->addError('imageFile', 'Failed to upload image.');
-            throw new \RuntimeException('Failed to upload image.');
-        }
-
+    ): Resource {
+        $file = null;
         try {
-            $file = self::createFileRecord($userId, $imageFile, $relativePath, $fullPath);
+            $file = self::createFileRecord($userId, $uploadFolder, $imageFile);
             return self::createImageResource($resourceType, $resourceId, $file, $isPrimary, $sortOrder);
         } catch (\Throwable $e) {
-            @unlink($fullPath);
+            if ($file !== null) {
+                $fullPath = Yii::getAlias('@webroot/' . ltrim($file->path, '/\\'));
+                if (is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+                $file->delete();
+            }
             if (!$form->hasErrors('imageFile')) {
-                $form->addError('imageFile', 'Failed to save image information.');
+                $form->addError('imageFile', $e->getMessage());
             }
             throw $e;
         }
@@ -73,7 +85,7 @@ final class ResourceImageHelper extends Component
 
     public static function markImagesNonPrimary(string $resourceType, int $resourceId): void
     {
-        Resources::updateAll(
+        Resource::updateAll(
             ['is_primary' => 0],
             [
                 'resource_type' => $resourceType,
@@ -90,8 +102,8 @@ final class ResourceImageHelper extends Component
         int $fileId,
         bool $isPrimary = true,
         int $sortOrder = 0
-    ): Resources {
-        $file = Files::findOne(['id' => $fileId]);
+    ): Resource {
+        $file = File::findOne(['id' => $fileId]);
         if ($file === null) {
             throw new \RuntimeException('File not found.');
         }
@@ -105,8 +117,8 @@ final class ResourceImageHelper extends Component
         int $resourceImageId,
         bool $isPrimary = true,
         int $sortOrder = 0
-    ): Resources {
-        $sourceResource = Resources::find()
+    ): Resource {
+        $sourceResource = Resource::find()
             ->with(['file'])
             ->where([
                 'id' => $resourceImageId,
@@ -123,7 +135,7 @@ final class ResourceImageHelper extends Component
 
     public static function deleteImageRecords(string $resourceType, int $resourceId): void
     {
-        $resources = Resources::find()
+        $resources = Resource::find()
             ->with(['file'])
             ->where([
                 'resource_type' => $resourceType,
@@ -154,7 +166,7 @@ final class ResourceImageHelper extends Component
 
     public static function deleteImageResourceLinks(string $resourceType, int $resourceId): void
     {
-        Resources::deleteAll([
+        Resource::deleteAll([
             'resource_type' => $resourceType,
             'resource_id' => $resourceId,
             'type' => 'image',
@@ -175,40 +187,55 @@ final class ResourceImageHelper extends Component
         ], __METHOD__);
     }
 
-    private static function createFileRecord(
-        int $userId,
-        UploadedFile $imageFile,
-        string $relativePath,
-        string $fullPath
-    ): Files {
-        $size = @getimagesize($fullPath);
+    public static function createFileRecord(int $userId, string $folder, UploadedFile $imageFile): File
+    {
+        self::validateImageFile($imageFile);
 
-        $file = new Files();
+        $fileName = Yii::$app->security->generateRandomString(16) . '.' . strtolower($imageFile->extension);
+        $relativePath = trim($folder, '/') . '/' . $fileName;
+        $fullPath = Yii::getAlias('@webroot/' . $relativePath);
+
+        FileHelper::createDirectory(dirname($fullPath));
+
+        if (!$imageFile->saveAs($fullPath)) {
+            throw new \RuntimeException('Failed to save uploaded file: ' . $imageFile->name);
+        }
+
+        $imageSize = @getimagesize($fullPath);
+        if ($imageSize === false) {
+            @unlink($fullPath);
+            throw new \RuntimeException('Invalid image file: ' . $imageFile->name);
+        }
+
+        [$width, $height] = $imageSize;
+
+        $file = new File();
         $file->user_id = $userId;
         $file->disk = 'local';
         $file->path = $relativePath;
-        $file->url = Yii::getAlias('@web/' . $relativePath);
+        $file->url = '/' . $relativePath;
         $file->original_name = $imageFile->name;
         $file->mime_type = $imageFile->type;
         $file->size_bytes = $imageFile->size;
-        $file->width = $size ? $size[0] : null;
-        $file->height = $size ? $size[1] : null;
+        $file->width = $width;
+        $file->height = $height;
 
-        if (!$file->save()) {
-            throw new \RuntimeException('Failed to save file record: ' . json_encode($file->errors));
+        if (!$file->save(false)) {
+            @unlink($fullPath);
+            throw new \RuntimeException('Failed to save file record: ' . $imageFile->name);
         }
 
         return $file;
     }
 
-    private static function createImageResource(
+    public static function createImageResource(
         string $resourceType,
         int $resourceId,
-        Files $file,
+        File $file,
         bool $isPrimary,
         int $sortOrder = 0
-    ): Resources {
-        $resource = new Resources();
+    ): Resource {
+        $resource = new Resource();
         $resource->file_id = $file->id;
         $resource->resource_type = $resourceType;
         $resource->resource_id = $resourceId;
@@ -218,10 +245,37 @@ final class ResourceImageHelper extends Component
         $resource->sort_order = $sortOrder;
         $resource->is_primary = $isPrimary ? 1 : 0;
 
-        if (!$resource->save()) {
+        if (!$resource->save(false)) {
             throw new \RuntimeException('Failed to save image resource: ' . json_encode($resource->errors));
         }
 
         return $resource;
     }
+
+    private static function validateImageFile(UploadedFile $imageFile): void
+    {
+        if ($imageFile->error !== UPLOAD_ERR_OK) {
+            throw new \RuntimeException('Upload failed: ' . $imageFile->name);
+        }
+
+        $extension = strtolower((string) $imageFile->extension);
+        if (!in_array($extension, self::IMAGE_EXTENSIONS, true)) {
+            throw new \RuntimeException('Unsupported image extension: ' . $imageFile->name);
+        }
+
+        if ((int) $imageFile->size > self::MAX_IMAGE_SIZE) {
+            throw new \RuntimeException('Image file is too large: ' . $imageFile->name);
+        }
+    }
+
+    private static function uploadedFileKey(UploadedFile $file): string
+    {
+        return implode('|', [
+            $file->tempName,
+            $file->name,
+            (string) $file->size,
+            (string) $file->error,
+        ]);
+    }
+
 }

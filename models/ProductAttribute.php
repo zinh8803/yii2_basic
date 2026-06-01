@@ -22,4 +22,24 @@ class ProductAttribute extends base\ProductAttribute
             ],
         ];
     }
+    /**
+     * Gets query for [[AttributeValues]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getAttributeValues()
+    {
+        return $this->hasMany(AttributeValue::class, ['attribute_id' => 'id'])->orderBy(['sort_order' => SORT_ASC]);
+    }
+
+    /**
+     * Gets query for [[Product]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getProduct()
+    {
+        return $this->hasOne(Product::class, ['id' => 'product_id']);
+    }
+
 }
