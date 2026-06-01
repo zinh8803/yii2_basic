@@ -51,12 +51,13 @@ class User extends ActiveRecord
     {
         return [
             [['is_active'], 'default', 'value' => 1],
-            [['role_id', 'username', 'email', 'password', 'phone_number', 'created_at', 'updated_at'], 'required'],
-            [['role_id', 'created_at', 'updated_at', 'is_active'], 'integer'],
+            [['username', 'email', 'password', 'phone_number', 'created_at', 'updated_at'], 'required'],
+            [['created_at', 'updated_at', 'is_active'], 'integer'],
             [['username', 'email', 'password', 'phone_number'], 'string', 'max' => 255],
             [['username'], 'unique'],
             [['email'], 'unique'],
-            [['role_id'], 'exist', 'skipOnError' => true, 'targetClass' => Roles::class, 'targetAttribute' => ['role_id' => 'id']],
+            [['auth_key'], 'string', 'max' => 64],
+            [['auth_key'], 'unique'],
         ];
     }
 
@@ -67,7 +68,6 @@ class User extends ActiveRecord
     {
         return [
             'id' => 'ID',
-            'role_id' => 'Role ID',
             'username' => 'Username',
             'email' => 'Email',
             'password' => 'Password',
@@ -178,15 +178,6 @@ class User extends ActiveRecord
         return $this->hasMany(Review::class, ['user_id' => 'id']);
     }
 
-    /**
-     * Gets query for [[Role]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getRole()
-    {
-        return $this->hasOne(Roles::class, ['id' => 'role_id']);
-    }
 
     /**
      * Gets query for [[UserAddresses]].

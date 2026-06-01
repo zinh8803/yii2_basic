@@ -32,6 +32,9 @@ $config = [
         'cache' => [
             'class' => \yii\caching\FileCache::class,
         ],
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
+        ],
         // function helper to get image url from resource
         'resourceImageHelper' => [
             'class' => \app\components\ResourceImageHelper::class,

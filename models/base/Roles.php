@@ -13,7 +13,7 @@ use yii\db\ActiveRecord;
  * @property int $created_at
  * @property int $updated_at
  *
- * @property Users[] $users
+ * @property User[] $users
  */
 class Roles extends ActiveRecord
 {
@@ -59,7 +59,7 @@ class Roles extends ActiveRecord
      */
     public function getUsers()
     {
-        return $this->hasMany(Users::class, ['role_id' => 'id']);
+        return $this->hasMany(User::class, ['role_id' => 'id']);
     }
 
 }
