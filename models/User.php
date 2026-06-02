@@ -70,9 +70,23 @@ class User extends BaseUser implements IdentityInterface
         if (parent::beforeSave($insert)) {
             if ($this->isNewRecord) {
                 $this->auth_key = \Yii::$app->security->generateRandomString();
+                $this->access_token = \Yii::$app->security->generateRandomString(64);
             }
+
             return true;
         }
         return false;
+    }
+    public static function findByEmail($email)
+    {
+        return static::findOne(['email' => $email]);
+    }
+    public static function findByUsername($username)
+    {
+        return static::findOne(['username' => $username]);
+    }
+    public function validatePassword($password)
+    {
+        return Yii::$app->security->validatePassword($password, $this->password);
     }
 }

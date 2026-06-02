@@ -9,7 +9,8 @@ class LoginForm extends User
     public function rules()
     {
         return [
-            [['username', 'password'], 'required'],
+            [['email', 'password'], 'required'],
+            ['email', 'email'],
         ];
     }
 }

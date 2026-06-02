@@ -39,7 +39,6 @@ use yii\db\ActiveRecord;
  * @property Post[] $posts
  * @property RefreshToken[] $refreshTokens
  * @property Review[] $reviews
- * @property Roles $role
  * @property UserAddress[] $userAddresses
  * @property WarehouseUser[] $warehouseUsers
  */
@@ -62,13 +61,15 @@ class BaseUser extends ActiveRecord
     {
         return [
             [['is_active'], 'default', 'value' => 1],
-            [['username', 'email', 'password', 'phone_number', 'created_at', 'updated_at'], 'required'],
+            [['username', 'email', 'password', 'phone_number'], 'required'],
             [['created_at', 'updated_at', 'is_active'], 'integer'],
             [['username', 'email', 'password', 'phone_number'], 'string', 'max' => 255],
             [['username'], 'unique'],
             [['email'], 'unique'],
             [['auth_key'], 'string', 'max' => 64],
             [['auth_key'], 'unique'],
+            [['access_token'], 'string', 'max' => 255],
+            [['access_token'], 'unique'],
         ];
     }
 
