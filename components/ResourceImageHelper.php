@@ -187,6 +187,175 @@ final class ResourceImageHelper extends Component
         ], __METHOD__);
     }
 
+    public static function attachImagesFromForm(
+        string $resourceType,
+        int $resourceId,
+        int $userId,
+        string $uploadFolder,
+        Model $form,
+        bool $hasPrimary = false,
+        int $sortOrder = 0,
+        int $maxFiles = 10
+    ): array {
+        $hasImages = !empty($form->imageFiles)
+            || !empty($form->image_file_ids)
+            || !empty($form->image_resource_ids);
+
+        if (!$hasImages) {
+            return [];
+        }
+
+        $resourceRows = [];
+        $imageErrors = [];
+        $uploadedFiles = [];
+        $time = time();
+        $imageFiles = $form->imageFiles ?? [];
+
+        if (count($imageFiles) > $maxFiles) {
+            foreach (array_slice($imageFiles, $maxFiles) as $imageFile) {
+                $imageErrors[] = [
+                    'name' => $imageFile->name,
+                    'error' => 'Maximum image count exceeded.',
+                ];
+            }
+
+            $imageFiles = array_slice($imageFiles, 0, $maxFiles);
+        }
+
+        foreach ($imageFiles as $imageFile) {
+            try {
+                $file = self::createFileRecord($userId, $uploadFolder, $imageFile);
+                $uploadedFiles[] = $file;
+            } catch (\Throwable $exception) {
+                $imageErrors[] = [
+                    'name' => $imageFile->name,
+                    'error' => $exception->getMessage(),
+                ];
+
+                Yii::warning($exception->getMessage(), __METHOD__);
+                continue;
+            }
+
+            $resourceRows[] = [
+                $file->id,
+                $resourceType,
+                $resourceId,
+                'image',
+                $imageFile->name,
+                null,
+                $sortOrder++,
+                $hasPrimary ? 0 : 1,
+                $time,
+                $time,
+            ];
+
+            $hasPrimary = true;
+        }
+
+        $existingFiles = [];
+        if (!empty($form->image_file_ids)) {
+            $existingFiles = File::find()
+                ->where(['id' => $form->image_file_ids])
+                ->indexBy('id')
+                ->all();
+        }
+
+        foreach (($form->image_file_ids ?? []) as $fileId) {
+            $file = $existingFiles[(int) $fileId] ?? null;
+            if ($file === null) {
+                $imageErrors[] = [
+                    'name' => (string) $fileId,
+                    'error' => 'File not found.',
+                ];
+                continue;
+            }
+
+            $resourceRows[] = [
+                (int) $fileId,
+                $resourceType,
+                $resourceId,
+                'image',
+                $file->original_name,
+                null,
+                $sortOrder++,
+                $hasPrimary ? 0 : 1,
+                $time,
+                $time,
+            ];
+
+            $hasPrimary = true;
+        }
+
+        $existingResources = [];
+        if (!empty($form->image_resource_ids)) {
+            $existingResources = Resource::find()
+                ->where([
+                    'id' => $form->image_resource_ids,
+                    'type' => 'image',
+                ])
+                ->indexBy('id')
+                ->all();
+        }
+
+        foreach (($form->image_resource_ids ?? []) as $resourceIdValue) {
+            $resource = $existingResources[(int) $resourceIdValue] ?? null;
+            if ($resource === null) {
+                $imageErrors[] = [
+                    'name' => (string) $resourceIdValue,
+                    'error' => 'Image resource not found.',
+                ];
+                continue;
+            }
+
+            $resourceRows[] = [
+                (int) $resource->file_id,
+                $resourceType,
+                $resourceId,
+                'image',
+                $resource->title,
+                $resource->alt_text,
+                $sortOrder++,
+                $hasPrimary ? 0 : 1,
+                $time,
+                $time,
+            ];
+
+            $hasPrimary = true;
+        }
+
+        if (!empty($resourceRows)) {
+            try {
+                Yii::$app->db->createCommand()->batchInsert(
+                    Resource::tableName(),
+                    [
+                        'file_id',
+                        'resource_type',
+                        'resource_id',
+                        'type',
+                        'title',
+                        'alt_text',
+                        'sort_order',
+                        'is_primary',
+                        'created_at',
+                        'updated_at',
+                    ],
+                    $resourceRows
+                )->execute();
+            } catch (\Throwable $exception) {
+                foreach ($uploadedFiles as $uploadedFile) {
+                    $fullPath = Yii::getAlias('@webroot/' . ltrim($uploadedFile->path, '/\\'));
+                    if (is_file($fullPath)) {
+                        @unlink($fullPath);
+                    }
+                }
+
+                throw $exception;
+            }
+        }
+
+        return $imageErrors;
+    }
+
     public static function createFileRecord(int $userId, string $folder, UploadedFile $imageFile): File
     {
         self::validateImageFile($imageFile);

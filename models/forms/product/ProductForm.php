@@ -2,38 +2,31 @@
 
 namespace app\models\forms\Product;
 
-use app\models\Brands;
-use app\models\Categories;
-use app\models\Files;
-use app\models\Products;
-use app\models\Resources;
-use yii\base\Model;
+use app\models\File;
+use app\models\Product;
+use app\models\Resource;
 use yii\web\UploadedFile;
 
-class CreateProductForm extends Model
+class ProductForm extends Product
 {
-    public $name;
-    public $slug;
-    public $description;
-    public $status;
-    public $category_id;
-    public $brand_id;
+    const SCENARIO_CREATE = 'create';
+    const SCENARIO_UPDATE = 'update';
     /** @var UploadedFile|null */
     public $imageFile;
     public $image_file_id;
     public $image_resource_id;
 
-    public function rules()
+    public function scenarios()
     {
         return [
-            [['description'], 'default', 'value' => null],
+            self::SCENARIO_CREATE => ['name',  'description', 'status', 'category_id', 'brand_id', 'imageFile', 'image_file_id', 'image_resource_id'],
+            self::SCENARIO_UPDATE => ['name',  'description', 'status', 'category_id', 'brand_id', 'imageFile', 'image_file_id', 'image_resource_id'],
+        ];
+    }
+    public function rules()
+    {
+        return array_merge(parent::rules(), [
             [['image_file_id', 'image_resource_id'], 'default', 'value' => null],
-            [['status'], 'default', 'value' => 1],
-            [['name'], 'unique', 'targetClass' => Products::class, 'targetAttribute' => 'name',],
-            [['name'], 'required'],
-            [['slug'], 'unique', 'targetClass' => Products::class, 'targetAttribute' => 'slug'],
-            [['category_id', 'brand_id', 'status', 'image_file_id', 'image_resource_id'], 'integer'],
-            [['name', 'slug', 'description'], 'string', 'max' => 255],
             [['imageFile'], 'validateSingleImageSource'],
             [
                 ['imageFile'],
@@ -47,22 +40,19 @@ class CreateProductForm extends Model
                 ['image_file_id'],
                 'exist',
                 'skipOnError' => true,
-                'targetClass' => Files::class,
+                'targetClass' => File::class,
                 'targetAttribute' => ['image_file_id' => 'id'],
             ],
             [
                 ['image_resource_id'],
                 'exist',
                 'skipOnError' => true,
-                'targetClass' => Resources::class,
+                'targetClass' => Resource::class,
                 'targetAttribute' => ['image_resource_id' => 'id'],
                 'filter' => ['type' => 'image'],
             ],
-            [['brand_id'], 'exist', 'skipOnError' => true, 'targetClass' => Brands::class, 'targetAttribute' => ['brand_id' => 'id']],
-            [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => Categories::class, 'targetAttribute' => ['category_id' => 'id']],
-        ];
+        ]);
     }
-
     public function validateSingleImageSource(): void
     {
         $sources = array_filter([

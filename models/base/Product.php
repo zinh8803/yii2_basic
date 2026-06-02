@@ -2,6 +2,8 @@
 
 namespace app\models\base;
 
+use app\models\ProductAttribute;
+use app\models\ProductVariant;
 use Yii;
 use yii\db\ActiveRecord;
 

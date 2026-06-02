@@ -3,9 +3,12 @@ namespace app\models;
 
 use app\behaviors\Timestamp;
 use yii\helpers\Inflector;
-
+use Yii;
+use app\models\Resource;
+use app\components\ResourceImageHelper;
 class ProductVariant extends base\ProductVariant
 {
+    public const RESOURCE_TYPE = 'product_variant';
     public static function find(): query\ProductVariantQuery
     {
         return new query\ProductVariantQuery(get_called_class());
@@ -112,5 +115,22 @@ class ProductVariant extends base\ProductVariant
         }
 
         return $sku;
+    }
+
+    public function attachImagesFromForm($form): array
+    {
+        $hasPrimary = $this->getPrimaryResource()->exists();
+        $currentSortOrder = $this->getResources()->max('sort_order');
+        $sortOrder = $currentSortOrder === null ? 0 : (int) $currentSortOrder + 1;
+
+        return ResourceImageHelper::attachImagesFromForm(
+            self::RESOURCE_TYPE,
+            $this->id,
+            Yii::$app->user->id ?? 9,
+            'uploads/product-variants',
+            $form,
+            $hasPrimary,
+            $sortOrder
+        );
     }
 }

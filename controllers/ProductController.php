@@ -3,14 +3,14 @@
 namespace app\controllers;
 
 use app\components\ResourceImageHelper;
-use app\models\forms\Product\CreateProductForm;
-use app\models\forms\Product\UpdateProductForm;
-use app\models\Products;
+use app\models\forms\Product\ProductForm;
+use app\models\Product;
 use Yii;
 use yii\base\Model;
 use app\controllers\BaseController as BaseController;
 use app\models\response\Product\ProductResponse;
 use app\models\search\ProductSearch;
+use yii\web\NotFoundHttpException;
 use yii\web\UploadedFile;
 
 class ProductController extends BaseController
@@ -19,15 +19,85 @@ class ProductController extends BaseController
     {
         $searchModel = new ProductSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, 'Get list product successfully');
-        //return $this->successPaginate($dataProvider);
+        return $this->successPaginate($dataProvider);
     }
 
 
     public function actionView($id)
     {
-        $model = ProductResponse::find()
+        $model = $this->findModel($id);
+        return $this->formatJson(true, $model, 'Product retrieved successfully');
+    }
+    public function actionCreate()
+    {
+        $form = new ProductForm([
+            'scenario' => ProductForm::SCENARIO_CREATE,
+        ]);
+
+        $this->loadProductForm($form);
+
+        if (!$form->validate()) {
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
+        }
+
+        $product = new Product();
+        try {
+            if ($this->saveProduct($product, $form)) {
+                $responseModel = $this->findModel($product->id);
+                return $this->formatJson(true, $responseModel, 'Product created successfully', 201);
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->formatJson(false, null, 'Internal server error', 500);
+        }
+
+        return $this->formatJson(false, $form->errors, 'Failed to create product', 400);
+    }
+
+    public function actionUpdate($id)
+    {
+        $product = $this->findModel($id);
+        $form = new ProductForm([
+            'scenario' => ProductForm::SCENARIO_UPDATE,
+        ]);
+        $form->id = $product->id;
+        $this->loadProductForm($form);
+
+        if (!$form->validate()) {
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
+        }
+
+        try {
+            if ($this->saveProduct($product, $form)) {
+                $responseModel = $this->findModel($product->id);
+                return $this->formatJson(true, $responseModel, 'Product updated successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->formatJson(false, null, 'Internal server error', 500);
+        }
+
+        return $this->formatJson(false, $form->errors, 'Failed to update product', 400);
+    }
+    public function actionDelete($id)
+    {
+        $model = $this->findModel($id);
+        try {
+            ResourceImageHelper::deleteImageResourceLinks('product', $model->id);
+            if ($model->delete()) {
+                return $this->formatJson(true, null, 'Product deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->formatJson(false, null, 'Internal server error', 500);
+        }
+
+        return $this->formatJson(false, null, 'Failed to delete product', 500);
+    }
+    protected function findModel($id)
+    {
+        $model = ProductForm::find()
+            ->where(['id' => $id])
             ->with([
                 'category',
                 'brand',
@@ -36,127 +106,27 @@ class ProductController extends BaseController
                 'productAttributes.attributeValues',
                 'primaryResource.file'
             ])
-            ->where(['id' => $id])
             ->one();
-        if (!$model) {
-            return $this->json(false, null, 'Product not found', 404);
+        if ($model === null) {
+            throw new NotFoundHttpException('Product not found');
         }
-        return $this->json(true, $model, 'Product retrieved successfully');
+        return $model;
     }
-    public function actionCreate()
+
+    public function loadProductForm(ProductForm $form): void
     {
-        $form = new CreateProductForm();
         $request = Yii::$app->request;
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
-
-        if ($isMultipart) {
-            $form->load($request->post(), '');
-            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
-        } else {
-            $form->load($request->bodyParams, '');
-        }
-
-        if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
-        }
-
-        $product = new Products();
-
-        try {
-            if ($this->createProduct($product, $form)) {
-                $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
-                return $this->json(true, $responseModel, 'Product created successfully', 201);
-            }
-        } catch (\Throwable $exception) {
-            Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
-        }
-
-        return $this->json(false, $form->errors, 'Failed to create product', 400);
-    }
-
-    public function actionByCategory($categoryId)
-    {
-        $searchModel = new ProductSearch();
-        $dataProvider = $searchModel->searchByCategory($categoryId, $this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, 'Get list product by category successfully');
-    }
-
-    public function actionUpdate($id)
-    {
-        $product = $this->findModel($id);
-        $form = $this->buildUpdateForm($product);
-        $request = Yii::$app->request;
-        $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
-        $data = [];
-
-        if ($isMultipart) {
+        $data = $isMultipart ? $request->post() : $request->bodyParams;
+        if (empty($data)) {
             $data = $request->post();
-            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
-        } else {
-            $data = $request->bodyParams;
         }
-
         $form->load($data, '');
-
-        if ($isMultipart && empty($data) && $form->imageFile === null) {
-            return $this->json(
-                false,
-                null,
-                'PUT/PATCH multipart/form-data is not supported by PHP. Use POST with _method=PUT or send JSON body.',
-                400
-            );
+        if ($isMultipart) {
+            $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
         }
-
-        if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
-        }
-
-        try {
-            if ($this->updateProduct($product, $form)) {
-                $responseModel = ProductResponse::find()->where(['id' => $product->id])->one();
-                return $this->json(true, $responseModel, 'Product updated successfully');
-            }
-        } catch (\Throwable $exception) {
-            Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
-        }
-
-        return $this->json(false, $form->errors, 'Failed to update product', 400);
     }
-    public function actionDelete($id)
-    {
-        try {
-            $model = $this->findModel($id);
-            if ($model->delete()) {
-                return $this->json(true, null, 'Product deleted successfully');
-            }
-        } catch (\Throwable $exception) {
-            Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
-        }
-
-        return $this->json(false, null, 'Failed to delete product', 500);
-    }
-    protected function findModel($id)
-    {
-        if (($model = Products::findOne(['id' => $id])) !== null) {
-            return $model;
-        }
-
-        throw new \yii\web\NotFoundHttpException('The requested page does not exist.');
-    }
-
-    private function buildUpdateForm(Products $product): UpdateProductForm
-    {
-        $form = new UpdateProductForm();
-        $form->id = $product->id;
-
-        return $form;
-    }
-
-    private function createProduct(Products $product, CreateProductForm $form): bool
+    private function saveProduct(Product $product, ProductForm $form): bool
     {
         $transaction = Yii::$app->db->beginTransaction();
 
@@ -170,8 +140,12 @@ class ProductController extends BaseController
                 'brand_id' => $form->brand_id,
             ], false);
 
-            if (!$product->save()) {
-                $this->addModelErrors($form, $product);
+            if (!$product->save(false)) {
+                foreach ($product->getErrors() as $attribute => $messages) {
+                    foreach ($messages as $message) {
+                        Yii::error("Product save error on $attribute: $message", __METHOD__);
+                    }
+                }
                 throw new \RuntimeException('Failed to save product.');
             }
 
@@ -188,43 +162,8 @@ class ProductController extends BaseController
         }
     }
 
-    private function updateProduct(Products $product, UpdateProductForm $form): bool
+    private function attachProductImageFromForm(Product $product, ProductForm $form): void
     {
-        $transaction = Yii::$app->db->beginTransaction();
-
-        try {
-            $product->setAttributes([
-                'name' => $form->name,
-                'slug' => $form->slug,
-                'description' => $form->description,
-                'status' => $form->status,
-                'category_id' => $form->category_id,
-                'brand_id' => $form->brand_id,
-            ], false);
-
-            if (!$product->save()) {
-                $this->addModelErrors($form, $product);
-                throw new \RuntimeException('Failed to save product.');
-            }
-
-            $this->attachProductImageFromForm($product, $form, true);
-
-            $transaction->commit();
-            return true;
-        } catch (\Throwable $e) {
-            if ($transaction->isActive) {
-                $transaction->rollBack();
-            }
-            Yii::error($e->getMessage(), __METHOD__);
-            return false;
-        }
-    }
-
-    private function attachProductImageFromForm(
-        Products $product,
-        CreateProductForm|UpdateProductForm $form,
-        bool $replacePrimary = false
-    ): void {
         if (
             !$form->imageFile instanceof UploadedFile
             && empty($form->image_file_id)
@@ -233,9 +172,7 @@ class ProductController extends BaseController
             return;
         }
 
-        if ($replacePrimary) {
-            ResourceImageHelper::markImagesNonPrimary('product', $product->id);
-        }
+        ResourceImageHelper::markImagesNonPrimary('product', $product->id);
 
         if ($form->imageFile instanceof UploadedFile) {
             ResourceImageHelper::attachImage('product', $product->id, 9, 'uploads/products', $form->imageFile, $form);
@@ -250,12 +187,5 @@ class ProductController extends BaseController
         ResourceImageHelper::attachExistingImageFile('product', $product->id, (int) $form->image_file_id);
     }
 
-    private function addModelErrors(Model $form, Model $model): void
-    {
-        foreach ($model->getErrors() as $attribute => $messages) {
-            foreach ($messages as $message) {
-                $form->addError($attribute, $message);
-            }
-        }
-    }
+
 }
