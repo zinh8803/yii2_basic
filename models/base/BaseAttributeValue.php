@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\ProductAttribute;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -19,7 +20,7 @@ use yii\db\ActiveRecord;
  *
  * @property ProductAttribute $attribute0
  */
-class AttributeValue extends ActiveRecord
+class BaseAttributeValue extends ActiveRecord
 {
     /**
      * {@inheritdoc}

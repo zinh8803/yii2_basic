@@ -2,9 +2,10 @@
 
 namespace app\models;
 
+use app\models\base\BaseCoupon;
 use app\behaviors\Timestamp;
 
-class Coupon extends base\Coupon
+class Coupon extends BaseCoupon
 {
     public static function find()
     {

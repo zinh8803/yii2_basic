@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\User;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -24,7 +25,7 @@ use yii\db\ActiveRecord;
  *
  * @property User $user
  */
-class OtpEmail extends ActiveRecord
+class BaseOtpEmail extends ActiveRecord
 {
 
 

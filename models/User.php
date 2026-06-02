@@ -1,11 +1,12 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseUser;
 use app\behaviors\Timestamp;
 use Yii;
 use yii\web\IdentityInterface;
 
-class user extends base\user implements IdentityInterface
+class User extends BaseUser implements IdentityInterface
 {
     public function behaviors()
     {

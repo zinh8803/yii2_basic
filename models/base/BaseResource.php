@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\File;
 use Yii;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
@@ -23,7 +24,7 @@ use yii\db\ActiveRecord;
  *
  * @property File $file
  */
-class Resource extends ActiveRecord
+class BaseResource extends ActiveRecord
 {
 
 

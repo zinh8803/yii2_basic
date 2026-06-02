@@ -1,10 +1,11 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseTag;
 use app\behaviors\Timestamp;
 use yii\behaviors\SluggableBehavior;
 
-class Tag extends base\Tag
+class Tag extends BaseTag
 {
     public static function find()
     {

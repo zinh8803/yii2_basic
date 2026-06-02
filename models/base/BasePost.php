@@ -2,6 +2,9 @@
 
 namespace app\models\base;
 
+use app\models\PostProduct;
+use app\models\Taggable;
+use app\models\User;
 use Yii;
 use yii\behaviors\SluggableBehavior;
 use yii\behaviors\TimestampBehavior;
@@ -28,7 +31,7 @@ use yii\db\ActiveRecord;
  * @property Taggable[] $taggables
  * @property User $user
  */
-class Post extends ActiveRecord
+class BasePost extends ActiveRecord
 {
 
 

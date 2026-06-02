@@ -2,6 +2,10 @@
 
 namespace app\models\base;
 
+use app\models\CouponUsage;
+use app\models\OrderItem;
+use app\models\Payment;
+use app\models\User;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -31,7 +35,7 @@ use yii\db\ActiveRecord;
  * @property OrderItem[] $orderItems
  * @property User $user
  */
-class Order extends ActiveRecord
+class BaseOrder extends ActiveRecord
 {
     public $items_input;
     public $item_product_id;

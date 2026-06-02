@@ -2,6 +2,9 @@
 
 namespace app\models\base;
 
+use app\models\Cart;
+use app\models\Product;
+use app\models\ProductVariant;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -19,7 +22,7 @@ use yii\db\ActiveRecord;
  * @property Product $product
  * @property ProductVariant $productVariant
  */
-class CartItem extends ActiveRecord
+class BaseCartItem extends ActiveRecord
 {
 
 

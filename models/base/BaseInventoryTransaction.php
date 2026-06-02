@@ -2,6 +2,8 @@
 
 namespace app\models\base;
 
+use app\models\User;
+use app\models\Warehouse;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -22,7 +24,7 @@ use yii\db\ActiveRecord;
  * @property User $createdBy
  * @property Warehouse $warehouse
  */
-class InventoryTransaction extends ActiveRecord
+class BaseInventoryTransaction extends ActiveRecord
 {
     /**
      * {@inheritdoc}

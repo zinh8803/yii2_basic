@@ -2,9 +2,10 @@
 
 namespace app\models;
 
+use app\models\base\BasePayment;
 use app\behaviors\Timestamp;
 
-class Payment extends base\Payment
+class Payment extends BasePayment
 {
     public function behaviors()
     {

@@ -2,6 +2,9 @@
 
 namespace app\models\base;
 
+use app\models\Order;
+use app\models\Product;
+use app\models\ProductVariant;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -23,7 +26,7 @@ use yii\db\ActiveRecord;
  * @property Product $product
  * @property ProductVariant $variant
  */
-class OrderItem extends ActiveRecord
+class BaseOrderItem extends ActiveRecord
 {
 
 

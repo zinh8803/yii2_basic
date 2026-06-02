@@ -1,9 +1,10 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseReview;
 use app\behaviors\Timestamp;
 
-class Review extends base\Review
+class Review extends BaseReview
 {
     public static function find()
     {

@@ -2,10 +2,11 @@
 
 namespace app\models;
 
+use app\models\base\BaseCartItem;
 use app\behaviors\Timestamp;
 
 
-class CartItem extends base\CartItem
+class CartItem extends BaseCartItem
 {
     public function behaviors()
     {

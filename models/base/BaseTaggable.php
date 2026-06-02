@@ -2,8 +2,11 @@
 
 namespace app\models\base;
 
+use app\models\Post;
+use app\models\Tag;
 use Yii;
 use yii\db\ActiveRecord;
+
 /**
  * This is the model class for table "taggables".
  *
@@ -17,7 +20,7 @@ use yii\db\ActiveRecord;
  * @property Post $post
  * @property Tag $tag
  */
-class Taggable extends ActiveRecord
+class BaseTaggable extends ActiveRecord
 {
 
 

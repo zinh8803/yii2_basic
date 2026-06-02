@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\CouponUsage;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -24,7 +25,7 @@ use yii\db\ActiveRecord;
  *
  * @property CouponUsage[] $couponUsages
  */
-class Coupon extends ActiveRecord
+class BaseCoupon extends ActiveRecord
 {
 
 

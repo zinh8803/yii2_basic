@@ -1,12 +1,13 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseProductVariant;
 use app\behaviors\Timestamp;
 use yii\helpers\Inflector;
 use Yii;
 use app\models\Resource;
 use app\components\ResourceImageHelper;
-class ProductVariant extends base\ProductVariant
+class ProductVariant extends BaseProductVariant
 {
     public const RESOURCE_TYPE = 'product_variant';
     public static function find(): query\ProductVariantQuery

@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\Order;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -24,7 +25,7 @@ use yii\db\ActiveRecord;
  * @property int $created_at
  * @property int $updated_at
  */
-class Payment extends ActiveRecord
+class BasePayment extends ActiveRecord
 {
 
 

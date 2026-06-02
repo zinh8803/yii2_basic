@@ -1,9 +1,10 @@
 <?php
 namespace app\models;
 
+use app\models\base\BasePostProduct;
 use app\behaviors\Timestamp;
 
-class PostProduct extends base\PostProduct
+class PostProduct extends BasePostProduct
 {
     public static function find()
     {

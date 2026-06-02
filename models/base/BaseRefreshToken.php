@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\User;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -22,7 +23,7 @@ use yii\db\ActiveRecord;
  *
  * @property User $user
  */
-class RefreshToken extends ActiveRecord
+class BaseRefreshToken extends ActiveRecord
 {
 
 

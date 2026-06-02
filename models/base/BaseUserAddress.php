@@ -2,30 +2,37 @@
 
 namespace app\models\base;
 
+use app\models\User;
 use Yii;
 use yii\db\ActiveRecord;
 
 /**
- * This is the model class for table "carts".
+ * This is the model class for table "user_addresses".
  *
  * @property int $id
  * @property int $user_id
- * @property float $total
+ * @property string $city
+ * @property string $ward
+ * @property string $detail_address
+ * @property string $phone_number
+ * @property string $name_address
  * @property int $created_at
  * @property int $updated_at
  *
- * @property CartItem[] $cartItems
  * @property User $user
  */
-class Cart extends ActiveRecord
+class BaseUserAddress extends ActiveRecord
 {
+
+
     /**
      * {@inheritdoc}
      */
     public static function tableName()
     {
-        return 'carts';
+        return 'user_addresses';
     }
+
 
     /**
      * {@inheritdoc}
@@ -33,12 +40,15 @@ class Cart extends ActiveRecord
     public function rules()
     {
         return [
-            [['user_id', 'total'], 'required'],
+            [['user_id', 'city', 'ward', 'detail_address', 'phone_number', 'name_address'], 'required'],
             [['user_id'], 'integer'],
-            [['total'], 'number'],
+            [['city', 'ward'], 'string', 'max' => 100],
+            [['detail_address', 'name_address'], 'string', 'max' => 255],
+            [['phone_number'], 'string', 'max' => 20],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
+
     /**
      * {@inheritdoc}
      */
@@ -47,19 +57,14 @@ class Cart extends ActiveRecord
         return [
             'id' => 'ID',
             'user_id' => 'User ID',
-            'total' => 'Total',
+            'city' => 'City',
+            'ward' => 'Ward',
+            'detail_address' => 'Detail Address',
+            'phone_number' => 'Phone Number',
+            'name_address' => 'Name Address',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];
-    }
-    /**
-     * Gets query for [[CartItems]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
-    public function getCartItems()
-    {
-        return $this->hasMany(CartItem::class, ['cart_id' => 'id']);
     }
 
     /**

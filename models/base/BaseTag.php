@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\Taggable;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -18,7 +19,7 @@ use yii\db\ActiveRecord;
  *
  * @property Taggable[] $taggables
  */
-class Tag extends ActiveRecord
+class BaseTag extends ActiveRecord
 {
 
 

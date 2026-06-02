@@ -2,8 +2,14 @@
 
 namespace app\models\base;
 
+use app\models\Brand;
+use app\models\CartItem;
+use app\models\Category;
+use app\models\OrderItem;
+use app\models\PostProduct;
 use app\models\ProductAttribute;
 use app\models\ProductVariant;
+use app\models\Review;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -31,7 +37,7 @@ use yii\db\ActiveRecord;
  * @property Resource|null $primaryResource
  * @property Review[] $reviews
  */
-class Product extends ActiveRecord
+class BaseProduct extends ActiveRecord
 {
     /**
      * {@inheritdoc}

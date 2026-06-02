@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\Product;
 use Yii;
 use yii\behaviors\SluggableBehavior;
 use yii\behaviors\TimestampBehavior;
@@ -23,7 +24,7 @@ use yii\db\ActiveRecord;
  * @property AttributeValue[] $attributeValues
  * @property Product $product
  */
-class ProductAttribute extends ActiveRecord
+class BaseProductAttribute extends ActiveRecord
 {
     /**
      * {@inheritdoc}

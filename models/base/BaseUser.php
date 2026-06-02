@@ -2,6 +2,17 @@
 
 namespace app\models\base;
 
+use app\models\Cart;
+use app\models\CouponUsage;
+use app\models\File;
+use app\models\InventoryTransaction;
+use app\models\Order;
+use app\models\OtpEmail;
+use app\models\Post;
+use app\models\RefreshToken;
+use app\models\Review;
+use app\models\UserAddress;
+use app\models\WarehouseUser;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -32,7 +43,7 @@ use yii\db\ActiveRecord;
  * @property UserAddress[] $userAddresses
  * @property WarehouseUser[] $warehouseUsers
  */
-class User extends ActiveRecord
+class BaseUser extends ActiveRecord
 {
 
 

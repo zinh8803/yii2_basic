@@ -3,10 +3,11 @@
 namespace app\models;
 
 use app\behaviors\Timestamp;
+use app\models\base\BaseBrand;
 use yii\behaviors\SluggableBehavior;
 
 
-class Brand extends base\Brand
+class Brand extends BaseBrand
 {
     public static function find()
     {

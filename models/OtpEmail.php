@@ -2,9 +2,10 @@
 
 namespace app\models;
 
+use app\models\base\BaseOtpEmail;
 use app\behaviors\Timestamp;
 
-class OtpEmail extends base\OtpEmail
+class OtpEmail extends BaseOtpEmail
 {
     public function behaviors()
     {

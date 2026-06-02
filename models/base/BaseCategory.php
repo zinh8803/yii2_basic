@@ -2,6 +2,8 @@
 
 namespace app\models\base;
 
+use app\models\Category;
+use app\models\Product;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -20,7 +22,7 @@ use yii\db\ActiveRecord;
  * @property Category $parent
  * @property Product[] $products
  */
-class Category extends ActiveRecord
+class BaseCategory extends ActiveRecord
 {
     /**
      * {@inheritdoc}

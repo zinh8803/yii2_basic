@@ -1,9 +1,10 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseUserAddress;
 use app\behaviors\Timestamp;
 
-class UserAddress extends base\UserAddress
+class UserAddress extends BaseUserAddress
 {
 
     public static function find()

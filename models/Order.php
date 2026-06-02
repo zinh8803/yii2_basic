@@ -2,9 +2,10 @@
 
 namespace app\models;
 
+use app\models\base\BaseOrder;
 use app\behaviors\Timestamp;
 use Yii;
-class Order extends base\Order
+class Order extends BaseOrder
 {
     public static function find()
     {

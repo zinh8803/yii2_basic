@@ -2,6 +2,9 @@
 
 namespace app\models\base;
 
+use app\models\CartItem;
+use app\models\OrderItem;
+use app\models\Product;
 use Yii;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
@@ -29,7 +32,7 @@ use yii\helpers\Inflector;
  * @property Resource[] $resources
  * @property Resource|null $primaryResource
  */
-class ProductVariant extends ActiveRecord
+class BaseProductVariant extends ActiveRecord
 {
     /**
      * {@inheritdoc}

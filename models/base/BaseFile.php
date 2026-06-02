@@ -2,6 +2,8 @@
 
 namespace app\models\base;
 
+use app\models\Resource;
+use app\models\User;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -24,7 +26,7 @@ use yii\db\ActiveRecord;
  * @property Resource[] $resources
  * @property User $user
  */
-class File extends ActiveRecord
+class BaseFile extends ActiveRecord
 {
     /**
      * {@inheritdoc}

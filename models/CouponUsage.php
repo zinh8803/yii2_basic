@@ -2,8 +2,9 @@
 
 namespace app\models;
 
+use app\models\base\BaseCouponUsage;
 use app\behaviors\Timestamp;
-class CouponUsage extends base\CouponUsage
+class CouponUsage extends BaseCouponUsage
 {
     public function behaviors()
     {

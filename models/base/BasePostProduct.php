@@ -2,6 +2,8 @@
 
 namespace app\models\base;
 
+use app\models\Post;
+use app\models\Product;
 use Yii;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
@@ -19,7 +21,7 @@ use yii\db\ActiveRecord;
  * @property Post $post
  * @property Product $product
  */
-class PostProduct extends ActiveRecord
+class BasePostProduct extends ActiveRecord
 {
     /**
      * {@inheritdoc}

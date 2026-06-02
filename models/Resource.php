@@ -1,9 +1,10 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseResource;
 use app\behaviors\Timestamp;
 
-class Resource extends base\Resource
+class Resource extends BaseResource
 {
     public function behaviors()
     {

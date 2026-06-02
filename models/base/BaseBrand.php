@@ -2,6 +2,7 @@
 
 namespace app\models\base;
 
+use app\models\Product;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -17,7 +18,7 @@ use yii\db\ActiveRecord;
  *
  * @property Product[] $products
  */
-class Brand extends ActiveRecord
+class BaseBrand extends ActiveRecord
 {
 
 

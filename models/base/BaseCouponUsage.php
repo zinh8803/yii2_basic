@@ -2,6 +2,9 @@
 
 namespace app\models\base;
 
+use app\models\Coupon;
+use app\models\Order;
+use app\models\User;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -21,7 +24,7 @@ use yii\db\ActiveRecord;
  * @property Order $order
  * @property User $user
  */
-class CouponUsage extends ActiveRecord
+class BaseCouponUsage extends ActiveRecord
 {
 
 

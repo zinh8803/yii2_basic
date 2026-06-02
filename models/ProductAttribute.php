@@ -1,10 +1,11 @@
 <?php
 namespace app\models;
 
+use app\models\base\BaseProductAttribute;
 use app\behaviors\Timestamp;
 use yii\behaviors\SluggableBehavior;
 
-class ProductAttribute extends base\ProductAttribute
+class ProductAttribute extends BaseProductAttribute
 {
     public static function find()
     {

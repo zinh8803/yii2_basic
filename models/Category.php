@@ -2,11 +2,12 @@
 
 namespace app\models;
 
+use app\models\base\BaseCategory;
 use app\behaviors\Timestamp;
 use yii\behaviors\SluggableBehavior;
 
 
-class Category extends base\Category
+class Category extends BaseCategory
 {
     public static function find()
     {

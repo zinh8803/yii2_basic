@@ -2,9 +2,10 @@
 
 namespace app\models;
 
+use app\models\base\BasePost;
 use app\behaviors\Timestamp;
 use yii\behaviors\SluggableBehavior;
-class Post extends base\Post
+class Post extends BasePost
 {
     public static function find()
     {

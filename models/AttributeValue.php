@@ -3,8 +3,9 @@
 namespace app\models;
 
 use app\behaviors\Timestamp;
+use app\models\base\BaseAttributeValue;
 use yii\behaviors\SluggableBehavior;
-class AttributeValue extends base\AttributeValue
+class AttributeValue extends BaseAttributeValue
 {
     public static function find()
     {

@@ -2,6 +2,8 @@
 
 namespace app\models\base;
 
+use app\models\Product;
+use app\models\User;
 use Override;
 use Yii;
 use yii\behaviors\TimestampBehavior;
@@ -22,7 +24,7 @@ use yii\db\ActiveRecord;
  * @property Product $product
  * @property User $user
  */
-class Review extends ActiveRecord
+class BaseReview extends ActiveRecord
 {
 
 
