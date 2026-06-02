@@ -3,7 +3,6 @@
 namespace app\models\base;
 
 use app\models\Taggable;
-use Yii;
 use yii\db\ActiveRecord;
 
 /**
@@ -39,8 +38,8 @@ class BaseTag extends ActiveRecord
         return [
             [['name', 'slug', 'type', 'description'], 'required'],
             [['name', 'slug', 'type', 'description'], 'string', 'max' => 255],
-            [['name'], 'unique'],
-            [['slug'], 'unique'],
+//            [['name'], 'unique'],
+//            [['slug'], 'unique'],
             //  [['description'], 'unique'],
         ];
     }

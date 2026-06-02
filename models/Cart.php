@@ -2,9 +2,8 @@
 
 namespace app\models;
 
-use app\models\base\BaseCart;
 use app\behaviors\Timestamp;
-use yii\behaviors\TimestampBehavior;
+use app\models\base\BaseCart;
 
 class Cart extends BaseCart
 {
@@ -12,6 +11,18 @@ class Cart extends BaseCart
     {
         return [
             Timestamp::class
+        ];
+    }
+
+    public function fields()
+    {
+        return [
+            'id',
+            'user_id',
+            'created_at',
+            'updated_at',
+            'cartItems'
+
         ];
     }
 }

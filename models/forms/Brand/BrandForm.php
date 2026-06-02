@@ -1,6 +1,7 @@
 <?php
 
 namespace app\models\forms\brand;
+
 use app\models\Brand;
 
 class BrandForm extends Brand
@@ -15,6 +16,7 @@ class BrandForm extends Brand
             self::SCENARIO_UPDATE => ['name', 'status'],
         ];
     }
+
     public function rules()
     {
         return [
