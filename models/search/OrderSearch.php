@@ -27,7 +27,7 @@ class OrderSearch extends Order
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = OrderResponse::find()->with(['orderItems']);
+        $query = Order::find()->with(['orderItems']);
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [

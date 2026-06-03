@@ -26,7 +26,7 @@ class ReviewSearch extends Review
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = ReviewResponse::find();
+        $query = Review::find();
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [

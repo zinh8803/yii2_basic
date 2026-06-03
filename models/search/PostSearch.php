@@ -2,10 +2,10 @@
 
 namespace app\models\search;
 
-use yii\base\Model;
-use yii\data\ActiveDataProvider;
 use app\models\Post;
 use app\models\response\PostResponse;
+use yii\base\Model;
+use yii\data\ActiveDataProvider;
 
 /**
  * PostSearch represents the model behind the search form of `app\models\Posts`.
@@ -13,6 +13,7 @@ use app\models\response\PostResponse;
 class PostSearch extends Post
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
@@ -43,7 +44,7 @@ class PostSearch extends Post
      */
     public function search($params, $formName = '')
     {
-        $query = PostResponse::find()->with([
+        $query = Post::find()->with([
             'taggables.tag',
             'primaryResource.file',
             'postProducts.product.primaryResource.file'

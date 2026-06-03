@@ -2,10 +2,10 @@
 
 namespace app\models\search;
 
-use yii\base\Model;
-use yii\data\ActiveDataProvider;
 use app\models\PostProduct;
 use app\models\response\PostProductResponse;
+use yii\base\Model;
+use yii\data\ActiveDataProvider;
 
 /**
  * PostProductSearch represents the model behind the search form of `app\models\PostProducts`.
@@ -42,7 +42,7 @@ class PostProductSearch extends PostProduct
      */
     public function search($params, $formName = '')
     {
-        $query = PostProductResponse::find();
+        $query = PostProduct::find();
 
         // add conditions that should always apply here
 

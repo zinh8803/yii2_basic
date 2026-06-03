@@ -2,7 +2,7 @@
 
 namespace app\models\forms\Order;
 
-use app\models\Users;
+use app\models\User;
 use yii\base\Model;
 
 class CreateOrderForm extends Model
@@ -22,11 +22,6 @@ class CreateOrderForm extends Model
     public $coupon_code;
     public $order_items = [];
 
-    // Order item fields (arrays)
-    public $item_product_id = [];
-    public $item_variant_id = [];
-    public $item_quantity = [];
-
     public function rules()
     {
         return [
@@ -35,18 +30,18 @@ class CreateOrderForm extends Model
             [['discount_amount'], 'default', 'value' => 0.00],
             [['shipping_fee'], 'default', 'value' => 0],
             [['payment_status'], 'default', 'value' => 'pending'],
-            [['user_id', 'email', 'receiver_phone', 'status', 'payment_method'], 'required'],
+            [['status'], 'default', 'value' => 'pending'],
+            [['user_id', 'email', 'receiver_phone', 'payment_method'], 'required'],
             [['user_id', 'is_discounted'], 'integer'],
             [['receiver_address', 'note'], 'string'],
             [['shipping_fee', 'discount_amount'], 'number'],
+            [['email'], 'email'],
             [['email', 'receiver_name', 'status'], 'string', 'max' => 255],
             [['receiver_phone'], 'string', 'max' => 20],
             [['payment_method', 'payment_status'], 'string', 'max' => 50],
             [['coupon_code'], 'string', 'max' => 50],
             [['order_items'], 'validateOrderItems', 'skipOnEmpty' => false],
-            [['item_product_id', 'item_variant_id'], 'each', 'rule' => ['integer']],
-            [['item_quantity'], 'each', 'rule' => ['integer', 'min' => 1]],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => Users::class, 'targetAttribute' => ['user_id' => 'id']],
+            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 
@@ -65,7 +60,7 @@ class CreateOrderForm extends Model
                 }
 
                 $productId = $item['product_id'] ?? null;
-                $variantId = $item['variant_id'] ?? null;
+                $variantId = $item['variant_id'] ?? ($item['product_variant_id'] ?? null);
                 $quantity = $item['quantity'] ?? null;
 
                 if (!$this->isPositiveInteger($productId)) {
@@ -82,28 +77,39 @@ class CreateOrderForm extends Model
             return;
         }
 
-        $legacyFields = [$this->item_product_id, $this->item_variant_id, $this->item_quantity];
-        $hasLegacyItems = !empty($this->item_product_id) || !empty($this->item_variant_id) || !empty($this->item_quantity);
-        if (!$hasLegacyItems) {
-            $this->addError($attribute, 'Order item is required.');
-            return;
-        }
-
-        foreach ($legacyFields as $field) {
-            if (!is_array($field)) {
-                $this->addError($attribute, 'Order item fields must be arrays.');
-                return;
-            }
-        }
-
-        $count = count($this->item_product_id);
-        if ($count !== count($this->item_variant_id) || $count !== count($this->item_quantity)) {
-            $this->addError($attribute, 'Order item fields must have the same length.');
-        }
+        $this->addError($attribute, 'Order item is required.');
     }
 
     private function isPositiveInteger($value): bool
     {
         return filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false;
+    }
+
+    public function getOrderItems(): array
+    {
+        if (!empty($this->order_items) && is_array($this->order_items)) {
+            $items = [];
+            foreach ($this->order_items as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $productId = $item['product_id'] ?? null;
+                $variantId = $item['variant_id'] ?? ($item['product_variant_id'] ?? null);
+                $quantity = $item['quantity'] ?? null;
+
+                if ($this->isPositiveInteger($productId) && $this->isPositiveInteger($variantId) && $this->isPositiveInteger($quantity)) {
+                    $items[] = [
+                        'product_id' => (int) $productId,
+                        'variant_id' => (int) $variantId,
+                        'quantity' => (int) $quantity,
+                    ];
+                }
+            }
+
+            return $items;
+        }
+
+        return [];
     }
 }

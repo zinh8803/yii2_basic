@@ -1,19 +1,15 @@
 <?php
+
 namespace app\models;
 
-use app\models\base\BaseProductVariant;
 use app\behaviors\Timestamp;
-use yii\helpers\Inflector;
-use Yii;
-use app\models\Resource;
 use app\components\ResourceImageHelper;
+use app\models\base\BaseProductVariant;
+use Yii;
+use yii\helpers\Inflector;
+
 class ProductVariant extends BaseProductVariant
 {
-    public const RESOURCE_TYPE = 'product_variant';
-    public static function find(): query\ProductVariantQuery
-    {
-        return new query\ProductVariantQuery(get_called_class());
-    }
     public function fields()
     {
         return [
@@ -56,6 +52,57 @@ class ProductVariant extends BaseProductVariant
             },
         ];
     }
+
+    public const RESOURCE_TYPE = 'product_variant';
+
+    public static function find(): query\ProductVariantQuery
+    {
+        return new query\ProductVariantQuery(get_called_class());
+    }
+
+    // public function fields()
+    // {
+    //     return [
+    //         'id',
+    //         'product_id',
+    //         'name',
+    //         'sku',
+    //         'price',
+    //         'sale_price',
+    //         'cost_price',
+    //         'stock',
+    //         'weight',
+    //         'is_active',
+    //         'image' => function () {
+    //             $resource = $this->primaryResource;
+    //             return $resource ? $resource->file->url : null;
+    //         },
+    //         'images' => function () {
+    //             return array_map(
+    //                 function ($resource) {
+    //                     return [
+    //                         'id' => $resource->id,
+    //                         'file_id' => $resource->file_id,
+    //                         'url' => $resource->file->url,
+    //                         'title' => $resource->title,
+    //                         'alt_text' => $resource->alt_text,
+    //                         'sort_order' => $resource->sort_order,
+    //                         'is_primary' => $resource->is_primary,
+    //                     ];
+    //                 },
+    //                 $this->resources
+    //             );
+    //         },
+    //         'created_at' => function () {
+    //             return date('Y-m-d H:i:s', $this->created_at);
+    //         },
+
+    //         'updated_at' => function () {
+    //             return date('Y-m-d H:i:s', $this->updated_at);
+    //         },
+    //     ];
+    // }
+
     public function behaviors()
     {
         return [
@@ -71,15 +118,16 @@ class ProductVariant extends BaseProductVariant
                         return $this->sku ?: $this->generateUniqueSku();
                     }
 
-                    if ($this->isAttributeChanged('sku') && !empty($this->sku)) {
-                        return $this->sku;
+                    if (!$this->isAttributeChanged('sku')) {
+                        return $this->getOldAttribute('sku');
                     }
 
-                    return $this->generateUniqueSku();
+                    return !empty($this->sku) ? $this->sku : $this->generateUniqueSku();
                 },
             ],
         ];
     }
+
     public function getResources()
     {
         return $this->hasMany(Resource::class, ['resource_id' => 'id'])
@@ -123,7 +171,6 @@ class ProductVariant extends BaseProductVariant
         $hasPrimary = $this->getPrimaryResource()->exists();
         $currentSortOrder = $this->getResources()->max('sort_order');
         $sortOrder = $currentSortOrder === null ? 0 : (int) $currentSortOrder + 1;
-
         return ResourceImageHelper::attachImagesFromForm(
             self::RESOURCE_TYPE,
             $this->id,

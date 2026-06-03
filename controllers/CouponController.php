@@ -2,12 +2,13 @@
 
 namespace app\controllers;
 
+use app\models\Coupon;
 use app\models\Coupons;
-use app\models\forms\Coupon\CreateCouponForm;
-use app\models\forms\Coupon\UpdateCouponForm;
+use app\models\forms\Coupon\CouponForm;
 use app\models\response\Coupon\CouponResponse;
 use app\models\search\CouponSearch;
 use Yii;
+use yii\web\NotFoundHttpException;
 
 class CouponController extends BaseController
 {
@@ -15,73 +16,44 @@ class CouponController extends BaseController
     {
         $searchModel = new CouponSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, 'Coupons retrieved successfully');
+        return $this->formatJson(true, $dataProvider, 'Coupons retrieved successfully');
     }
 
     public function actionView($id)
     {
-        $model = CouponResponse::findOne(['id' => $id]);
-        if ($model) {
-            return $this->json(true, $model, 'Coupon retrieved successfully');
-        }
-        return $this->json(false, null, 'Coupon not found', 404);
+        $model = $this->findModel($id);
+        return $this->formatJson(true, $model, 'Coupons retrieved successfully');
     }
 
     public function actionCreate()
     {
-        $form = new CreateCouponForm();
+        $form = new CouponForm([
+            'scenario' => CouponForm::SCENARIO_CREATE,
+        ]);
         $form->load($this->request->bodyParams, '');
-
         if ($form->validate()) {
-            $coupon = new Coupons();
-
-            $coupon->setAttributes($form->getAttributes([
-                'code',
-                'type',
-                'value',
-                'min_order_value',
-                'max_discount',
-                'max_usage',
-            ]), false);
-
-            $coupon->used_count = 0;
-            $coupon->starts_at = strtotime($form->starts_at);
-            $coupon->expires_at = strtotime($form->expires_at);
-
+            $coupon = new Coupon();
+            $coupon->setAttributes($form->attributes, false);
             try {
-                if ($coupon->save()) {
-                    return $this->json(true, $coupon, 'Coupon created successfully', 201);
-                }
-
-                Yii::error('Failed to save coupon: ' . json_encode($coupon->errors));
-                foreach ($coupon->getErrors() as $attribute => $messages) {
-                    foreach ($messages as $message) {
-                        $form->addError($attribute, $message);
-                    }
+                if ($coupon->save(false)) {
+                    return $this->formatJson(true, $coupon, 'Coupon created successfully', self::HTTP_CREATED);
                 }
             } catch (\Throwable $exception) {
                 Yii::error($exception->getMessage(), __METHOD__);
-                return $this->json(false, null, 'Internal server error', 500);
+                return $this->formatJson(false, $exception->getMessage(), 'Internal server error', 500);
             }
         }
-
-        return $this->json(false, $form->errors, 'Validation failed', 422);
+        return $this->formatJson(false, $form->errors, 'Validation failed', 422);
     }
 
     public function actionUpdate($id)
     {
-        $model = CouponResponse::findOne(['id' => $id]);
-        if (!$model) {
-            return $this->json(false, null, 'Coupon not found', 404);
-        }
-        $form = new UpdateCouponForm();
+        $model = $this->findModel($id);
+        $form = new CouponForm([
+            'scenario' => CouponForm::SCENARIO_UPDATE,
+        ]);
         $form->id = $id;
-        $data = $this->request->bodyParams;
-        if (empty($data)) {
-            $data = $this->request->post();
-        }
-        $form->load($data, '');
+        $form->load($this->request->bodyParams, '');
 
         if ($form->validate()) {
             $model->setAttributes($form->getAttributes([
@@ -92,57 +64,65 @@ class CouponController extends BaseController
                 'max_discount',
                 'max_usage',
                 'is_active',
+                'starts_at',
+                'expires_at',
             ]), false);
-            $model->starts_at = strtotime($form->starts_at);
-            $model->expires_at = strtotime($form->expires_at);
 
             try {
-                if ($model->save()) {
-                    return $this->json(true, $model, 'Coupon updated successfully');
+                if ($model->save(false)) {
+                    return $this->formatJson(true, $model, 'Coupon updated successfully');
                 }
             } catch (\Throwable $exception) {
                 Yii::error($exception->getMessage(), __METHOD__);
-                return $this->json(false, null, 'Internal server error', 500);
+                return $this->formatJson(false, $exception->getMessage(), 'Internal server error', 500);
             }
         }
 
-        return $this->json(false, $form->errors, 'Validation failed', 422);
+        return $this->formatJson(false, $form->errors, 'Validation failed', 422);
     }
 
     public function actionDelete($id)
     {
-        $model = CouponResponse::findOne(['id' => $id]);
-        if (!$model) {
-            return $this->json(false, null, 'Coupon not found', 404);
-        }
+        $model = $this->findModel($id);
         try {
             if ($model->delete()) {
-                return $this->json(true, null, 'Coupon deleted successfully');
+                return $this->formatJson(true, null, 'Coupon deleted successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            return $this->formatJson(false, null, 'Internal server error', 500);
         }
 
-        return $this->json(false, null, 'Failed to delete coupon', 500);
+        return $this->formatJson(false, null, 'Failed to delete coupon', 500);
     }
 
     public function actionCheckValid($code)
     {
-        $model = CouponResponse::findOne(['code' => $code, 'is_active' => 1]);
+        $model = CouponForm::findOne(['code' => $code, 'is_active' => 1]);
         if (!$model) {
-            return $this->json(false, null, 'Invalid coupon code', 404);
+            return $this->formatJson(false, null, 'Invalid coupon code', 404);
         }
         if ($model->used_count >= $model->max_usage) {
-            return $this->json(false, null, 'Coupon usage limit reached', 422);
+            return $this->formatJson(false, null, 'Coupon usage limit reached', 422);
         }
         $currentTime = time();
         if ($model->starts_at > $currentTime) {
-            return $this->json(false, null, 'Coupon not active yet', 422);
+            return $this->formatJson(false, null, 'Coupon not active yet', 422);
         }
         if ($model->expires_at < $currentTime) {
-            return $this->json(false, null, 'Coupon has expired', 422);
+            return $this->formatJson(false, null, 'Coupon has expired', 422);
         }
-        return $this->json(true, $model, 'Coupon is valid');
+        return $this->formatJson(true, $model, 'Coupon is valid');
+    }
+
+    public function findModel($id)
+    {
+        $model = CouponForm::find()
+            ->where(['id' => $id])
+            ->one();
+        if (!$model) {
+            throw new NotFoundHttpException('Coupon not found');
+        }
+        return $model;
     }
 }

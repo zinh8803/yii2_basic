@@ -2,10 +2,10 @@
 
 namespace app\models\search;
 
-use yii\base\Model;
-use yii\data\ActiveDataProvider;
 use app\models\Category;
 use app\models\response\CategoryResponse;
+use yii\base\Model;
+use yii\data\ActiveDataProvider;
 
 /**
  * CategorySearch represents the model behind the search form of `app\models\Category`.
@@ -13,6 +13,7 @@ use app\models\response\CategoryResponse;
 class CategorySearch extends Category
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
@@ -45,7 +46,7 @@ class CategorySearch extends Category
      */
     public function search($params, $formName = '')
     {
-        $query = CategoryResponse::find()
+        $query = Category::find()
             ->roots()
             ->active()
             ->tree();

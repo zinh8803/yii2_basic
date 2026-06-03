@@ -48,10 +48,10 @@ class ProductVariantController extends BaseController
 
             $transaction->commit();
 
-            $responseModel = $this->findModel($model->id);
+            $this->populateImageRelations($model);
             $imageErrors = $imageErrors ?? [];
             $data = [
-                'variant' => $responseModel,
+                'variant' => $model,
                 'image_errors' => $imageErrors,
                 'image_error_count' => count($imageErrors),
             ];
@@ -96,10 +96,10 @@ class ProductVariantController extends BaseController
             $imageErrors = $model->attachImagesFromForm($form);
 
             $transaction->commit();
-            $responseModel = $this->findModel($model->id);
+            $this->populateImageRelations($model);
             $imageErrors = $imageErrors ?? [];
             $data = [
-                'variant' => $responseModel,
+                'variant' => $model,
                 'image_errors' => $imageErrors,
                 'image_error_count' => count($imageErrors),
             ];
@@ -174,5 +174,23 @@ class ProductVariantController extends BaseController
             'weight',
             'is_active',
         ]), false);
+    }
+
+    private function populateImageRelations(ProductVariant $model): void
+    {
+        $resources = $model->getResources()
+            ->with(['file'])
+            ->all();
+
+        $primaryResource = null;
+        foreach ($resources as $resource) {
+            if ((int) $resource->is_primary === 1) {
+                $primaryResource = $resource;
+                break;
+            }
+        }
+
+        $model->populateRelation('resources', $resources);
+        $model->populateRelation('primaryResource', $primaryResource);
     }
 }

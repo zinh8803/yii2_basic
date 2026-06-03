@@ -2,10 +2,10 @@
 
 namespace app\models\search;
 
-use yii\base\Model;
-use yii\data\ActiveDataProvider;
 use app\models\ProductVariant;
 use app\models\response\ProductVariantResponse;
+use yii\base\Model;
+use yii\data\ActiveDataProvider;
 
 /**
  * ProductVariantSearch represents the model behind the search form of `app\models\ProductVariants`.
@@ -13,6 +13,7 @@ use app\models\response\ProductVariantResponse;
 class ProductVariantSearch extends ProductVariant
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
@@ -44,7 +45,7 @@ class ProductVariantSearch extends ProductVariant
      */
     public function search($params, $formName = '')
     {
-        $query = ProductVariantResponse::find()
+        $query = ProductVariant::find()
             ->with(['resources.file', 'primaryResource.file']);
 
         // add conditions that should always apply here

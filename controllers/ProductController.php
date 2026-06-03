@@ -3,13 +3,11 @@
 namespace app\controllers;
 
 use app\components\ResourceImageHelper;
+use app\controllers\BaseController as BaseController;
 use app\models\forms\Product\ProductForm;
 use app\models\Product;
-use Yii;
-use yii\base\Model;
-use app\controllers\BaseController as BaseController;
-use app\models\response\Product\ProductResponse;
 use app\models\search\ProductSearch;
+use Yii;
 use yii\web\NotFoundHttpException;
 use yii\web\UploadedFile;
 
@@ -19,7 +17,7 @@ class ProductController extends BaseController
     {
         $searchModel = new ProductSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        return $this->successPaginate($dataProvider);
+        return $this->formatJson(true, $dataProvider, "Products fetched successfully");
     }
 
 
@@ -28,6 +26,7 @@ class ProductController extends BaseController
         $model = $this->findModel($id);
         return $this->formatJson(true, $model, 'Product retrieved successfully');
     }
+
     public function actionCreate()
     {
         $form = new ProductForm([
@@ -79,6 +78,7 @@ class ProductController extends BaseController
 
         return $this->formatJson(false, $form->errors, 'Failed to update product', 400);
     }
+
     public function actionDelete($id)
     {
         $model = $this->findModel($id);
@@ -94,6 +94,7 @@ class ProductController extends BaseController
 
         return $this->formatJson(false, null, 'Failed to delete product', 500);
     }
+
     protected function findModel($id)
     {
         $model = ProductForm::find()
@@ -126,6 +127,7 @@ class ProductController extends BaseController
             $form->imageFile = ResourceImageHelper::getUploadedImageFile($form);
         }
     }
+
     private function saveProduct(Product $product, ProductForm $form): bool
     {
         $transaction = Yii::$app->db->beginTransaction();

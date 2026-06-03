@@ -3,7 +3,6 @@
 namespace app\models\base;
 
 use app\models\CouponUsage;
-use Yii;
 use yii\db\ActiveRecord;
 
 /**
@@ -50,7 +49,6 @@ class BaseCoupon extends ActiveRecord
             [['max_usage', 'used_count', 'starts_at', 'expires_at', 'is_active'], 'integer'],
             [['code'], 'string', 'max' => 50],
             [['type'], 'string', 'max' => 20],
-            [['code'], 'unique'],
         ];
     }
 

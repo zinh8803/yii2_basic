@@ -2,26 +2,48 @@
 
 namespace app\models;
 
-use app\models\base\BaseCoupon;
 use app\behaviors\Timestamp;
+use app\models\base\BaseCoupon;
 
 class Coupon extends BaseCoupon
 {
+    public function fields()
+    {
+        return [
+            'id',
+            'code',
+            'type',
+            'value',
+            'min_order_value',
+            'max_discount',
+            'max_usage',
+            'used_count',
+            'starts_at' => function () {
+                return date('Y-m-d H:i:s', $this->starts_at);
+            },
+            'expires_at' => function () {
+                return date('Y-m-d H:i:s', $this->expires_at);
+            },
+            'is_active',
+            'created_at' => function () {
+                return date('Y-m-d H:i:s', $this->created_at);
+            },
+
+            'updated_at' => function () {
+                return date('Y-m-d H:i:s', $this->updated_at);
+            },
+        ];
+    }
+
     public static function find()
     {
         return new query\CouponQuery(get_called_class());
     }
+
     public function behaviors()
     {
         return [
             Timestamp::class
         ];
     }
-    // public function afterFind()
-    // {
-    //     parent::afterFind();
-
-    //     $this->starts_at = date('Y-m-d\TH:i', $this->starts_at);
-    //     $this->expires_at = date('Y-m-d\TH:i', $this->expires_at);
-    // }
 }

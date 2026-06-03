@@ -2,10 +2,10 @@
 
 namespace app\models\search;
 
-use yii\base\Model;
-use yii\data\ActiveDataProvider;
 use app\models\Brand;
 use app\models\response\BrandResponse;
+use yii\base\Model;
+use yii\data\ActiveDataProvider;
 
 /**
  * BrandSearch represents the model behind the search form of `app\models\Brand`.
@@ -13,6 +13,7 @@ use app\models\response\BrandResponse;
 class BrandSearch extends Brand
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
@@ -43,7 +44,7 @@ class BrandSearch extends Brand
      */
     public function search($params, $formName = '', $active = true)
     {
-        $query = BrandResponse::find();
+        $query = Brand::find();
 
         if ($active) {
             $query->andWhere(['status' => 1]);

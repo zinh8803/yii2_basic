@@ -3,7 +3,6 @@
 namespace app\models\base;
 
 use app\models\Order;
-use Yii;
 use yii\db\ActiveRecord;
 
 /**
@@ -47,7 +46,7 @@ class BasePayment extends ActiveRecord
             [['payment_status'], 'default', 'value' => 'pending'],
             [['refunded_amount'], 'default', 'value' => 0.00],
             [['refund_status'], 'default', 'value' => 'none'],
-            [['order_id', 'amount', 'payment_method', 'created_at', 'updated_at'], 'required'],
+            [['order_id', 'amount', 'payment_method'], 'required'],
             [['order_id', 'refund_ad', 'paid_at', 'created_at', 'updated_at'], 'integer'],
             [['amount', 'refunded_amount'], 'number'],
             [['gateway_response'], 'string'],
