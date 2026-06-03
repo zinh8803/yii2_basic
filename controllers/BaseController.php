@@ -5,6 +5,7 @@ namespace app\controllers;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\Controller;
+use yii\web\ForbiddenHttpException;
 
 class BaseController extends Controller
 {
@@ -43,38 +44,10 @@ class BaseController extends Controller
             'error' => null,
         ];
     }
-    // public function paginate($query, int $defaultLimit = 10): array
-    // {
-    //     $page = (int) Yii::$app->request->get('page', 1);
-    //     $limit = (int) Yii::$app->request->get('limit', $defaultLimit);
-    //     $maxLimit = 100;
-
-    //     if ($page < 1) {
-    //         $page = 1;
-    //     }
-
-    //     if ($limit < 1) {
-    //         $limit = $defaultLimit;
-    //     }
-    //     if ($limit > $maxLimit) {
-    //         $limit = $maxLimit;
-    //     }
-
-    //     $total = (clone $query)->count();
-
-    //     $data = $query
-    //         ->offset(($page - 1) * $limit)
-    //         ->limit($limit)
-    //         ->all();
-
-    //     return [
-    //         'items' => $data,
-    //         'pagination' => [
-    //             'total' => (int) $total,
-    //             'page' => $page,
-    //             'limit' => $limit,
-    //             'total_page' => (int) ceil($total / $limit),
-    //         ],
-    //     ];
-    // }
+    protected function checkPermission(string $permission): void
+    {
+        if (!Yii::$app->user->can($permission)) {
+            throw new ForbiddenHttpException('Permission denied');
+        }
+    }
 }

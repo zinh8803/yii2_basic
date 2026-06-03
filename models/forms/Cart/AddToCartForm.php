@@ -6,14 +6,11 @@ use yii\base\Model;
 
 class AddToCartForm extends Model
 {
-    public $user_id;
     public $items;
 
     public function rules()
     {
         return [
-            [['user_id', 'items'], 'required'],
-            [['user_id'], 'integer'],
             [['items'], 'validateItems'],
         ];
     }

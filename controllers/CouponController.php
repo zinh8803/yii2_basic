@@ -8,10 +8,22 @@ use app\models\forms\Coupon\CouponForm;
 use app\models\response\Coupon\CouponResponse;
 use app\models\search\CouponSearch;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 
 class CouponController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new CouponSearch();
@@ -27,6 +39,7 @@ class CouponController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('coupon.create');
         $form = new CouponForm([
             'scenario' => CouponForm::SCENARIO_CREATE,
         ]);
@@ -48,6 +61,7 @@ class CouponController extends BaseController
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('coupon.update');
         $model = $this->findModel($id);
         $form = new CouponForm([
             'scenario' => CouponForm::SCENARIO_UPDATE,
@@ -83,6 +97,7 @@ class CouponController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('coupon.delete');
         $model = $this->findModel($id);
         try {
             if ($model->delete()) {
@@ -98,6 +113,7 @@ class CouponController extends BaseController
 
     public function actionCheckValid($code)
     {
+        $this->checkPermission('coupon.checkValid');
         $model = CouponForm::findOne(['code' => $code, 'is_active' => 1]);
         if (!$model) {
             return $this->formatJson(false, null, 'Invalid coupon code', 404);

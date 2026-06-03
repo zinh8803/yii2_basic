@@ -31,11 +31,24 @@ class RbacController extends Controller
             'product.update',
             'product.delete',
 
+            'productVariant.index',
+            'productVariant.view',
+            'productVariant.create',
+            'productVariant.update',
+            'productVariant.delete',
+
+            'productAttribute.index',
+            'productAttribute.view',
+            'productAttribute.create',
+            'productAttribute.update',
+            'productAttribute.delete',
+
             'post.index',
             'post.view',
             'post.create',
             'post.update',
             'post.delete',
+            'post.updateStatus',
 
             'tag.index',
             'tag.view',
@@ -48,11 +61,19 @@ class RbacController extends Controller
             'coupon.create',
             'coupon.update',
             'coupon.delete',
+            'coupon.checkValid',
 
             'order.index',
             'order.view',
+            'order.create',
             'order.update',
+            'order.history',
             'order.updateStatus',
+
+            'cart.view',
+            'cart.create',
+            'cart.removeItems',
+            'cart.clearCart',
 
             'review.index',
             'review.view',
@@ -63,6 +84,9 @@ class RbacController extends Controller
             'user.view',
             'user.update',
             'user.delete',
+
+            'file.index',
+            'file.view',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -81,21 +105,33 @@ class RbacController extends Controller
         $auth->add($admin);
 
         // permissions for user role
-        foreach (['post.index', 'post.view', 'product.index', 'product.view', 'category.index', 'category.view'] as $permissionName) {
+        foreach ([
+                     'post.index', 'post.view',
+                     'tag.index', 'tag.view',
+                     'product.index', 'product.view',
+                     'productVariant.index', 'productVariant.view',
+                     'productAttribute.index', 'productAttribute.view',
+                     'category.index', 'category.view',
+                     'brand.index', 'brand.view',
+                     'cart.create', 'cart.view', 'cart.clearCart', 'cart.removeItems',
+                     'order.view', 'order.create', 'order.history',
+                     'review.index', 'review.view',
+                     'coupon.index', 'coupon.view', 'coupon.checkValid',
+                 ] as $permissionName) {
             $auth->addChild($user, $auth->getPermission($permissionName));
         }
 
         // permissions for editor role
         foreach ([
-            'post.index',
-            'post.view',
-            'post.create',
-            'post.update',
-            'tag.index',
-            'tag.view',
-            'tag.create',
-            'tag.update',
-        ] as $permissionName) {
+                     'post.index',
+                     'post.view',
+                     'post.create',
+                     'post.update',
+                     'tag.index',
+                     'tag.view',
+                     'tag.create',
+                     'tag.update',
+                 ] as $permissionName) {
             $auth->addChild($editor, $auth->getPermission($permissionName));
         }
 

@@ -6,10 +6,22 @@ use app\models\Brand;
 use app\models\forms\brand\BrandForm;
 use app\models\search\BrandSearch;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 
 class BrandController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new BrandSearch();
@@ -25,6 +37,7 @@ class BrandController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('brand.create');
         $form = new BrandForm([
             'scenario' => BrandForm::SCENARIO_CREATE,
         ]);
@@ -46,6 +59,7 @@ class BrandController extends BaseController
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('brand.update');
         $model = $this->findModel($id);
         $form = new BrandForm([
             'scenario' => BrandForm::SCENARIO_UPDATE,
@@ -70,6 +84,7 @@ class BrandController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('brand.delete');
         $model = $this->findModel($id);
         try {
             if ($model->delete()) {

@@ -9,6 +9,7 @@ class OrderCreateModel extends Order
 {
     public function create(CreateOrderForm $form): ?Order
     {
+        $userId = Yii::$app->user->id;
         $items = $form->getOrderItems();
         if (empty($items)) {
             $form->addError('order_items', 'Order item is required.');
@@ -50,7 +51,7 @@ class OrderCreateModel extends Order
         }
 
         $this->createOrUpdatePayment($order, $form);
-        $this->clearCartUser((int) $order->user_id);
+        $this->clearCartUser($userId);
 
         $order->populateRelation('orderItems', $this->findOrderItems($order->id));
 
@@ -59,16 +60,17 @@ class OrderCreateModel extends Order
 
     private function buildOrderFromForm(CreateOrderForm $form): Order
     {
+        $userId = Yii::$app->user->id;
         $order = new Order();
         $order->setAttributes([
-            'user_id' => $form->user_id,
+            'user_id' => $userId,
             'email' => $form->email,
             'receiver_name' => $form->receiver_name,
             'receiver_phone' => $form->receiver_phone,
             'receiver_address' => $form->receiver_address,
             'note' => $form->note,
             'status' => $form->status,
-            'payment_method' => 'pending',
+            'payment_method' => $form->payment_method,
             'payment_status' => 'pending',
             'shipping_fee' => $form->shipping_fee ?? 0,
         ], false);
@@ -266,10 +268,11 @@ class OrderCreateModel extends Order
 
     private function recordCouponUsage(Coupon $coupon, Order $order, float $discountAmount, CreateOrderForm $form): bool
     {
+        $userId = Yii::$app->user->id;
         $usage = new CouponUsage();
         $usage->setAttributes([
             'coupon_id' => $coupon->id,
-            'user_id' => $order->user_id,
+            'user_id' => $userId,
             'order_id' => $order->id,
             'used_at' => time(),
             'discount_applied' => $discountAmount,

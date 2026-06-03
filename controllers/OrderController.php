@@ -10,12 +10,25 @@ use app\models\Payment;
 use app\models\search\OrderSearch;
 use app\models\User;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 
 class OrderController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            //      'except' => [],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
+        $this->checkPermission('order.index');
         $searchModel = new OrderSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         return $this->formatJson(true, $dataProvider, "Order List");
@@ -23,12 +36,14 @@ class OrderController extends BaseController
 
     public function actionView($id)
     {
+        $this->checkPermission('order.view');
         $model = $this->findModel($id);
         return $this->formatJson(true, $model, 'Order retrieved successfully');
     }
 
     public function actionCreate()
     {
+        $this->checkPermission('order.create');
         $form = new CreateOrderForm();
         $form->load($this->request->bodyParams, '');
 
@@ -57,6 +72,7 @@ class OrderController extends BaseController
 
     public function actionUpdateStatusOrder($id = null)
     {
+        $this->checkPermission('order.updateStatus');
         $form = new UpdateStatusOrderForm();
         $form->load($this->request->bodyParams, '');
 
@@ -128,8 +144,10 @@ class OrderController extends BaseController
         return $model;
     }
 
-    public function actionMyOrders($userId)
+    public function actionMyOrders()
     {
+        $userId = Yii::$app->user->id;
+        $this->checkPermission('order.history');
         $orders = Order::find()
             ->with(['orderItems', 'payments'])
             ->where(['user_id' => $userId])

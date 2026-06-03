@@ -3,12 +3,24 @@
 namespace app\controllers;
 
 use app\models\forms\auth\LoginForm;
-use app\models\User;
 use app\models\forms\auth\RegisterForm;
+use app\models\User;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 
 class AuthController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['register', 'login'],
+        ];
+        return $behaviors;
+    }
+
     public function actionRegister()
     {
         $form = new RegisterForm();
@@ -60,6 +72,17 @@ class AuthController extends BaseController
             'user_id' => $user->id,
             'access_token' => $user->access_token,
         ], 'Login success', 200);
+    }
+
+    public function actionMe()
+    {
+        $user = Yii::$app->user->identity;
+        return $this->formatJson(true, [
+            'id' => $user->id,
+            'username' => $user->username,
+            'email' => $user->email,
+            'phone_number' => $user->phone_number,
+        ], 'User info retrieved successfully', 200);
     }
 
     public function actionLogout()

@@ -7,11 +7,23 @@ use app\models\Category;
 use app\models\forms\category\CategoryForm;
 use app\models\search\CategorySearch;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\BadRequestHttpException;
 use yii\web\NotFoundHttpException;
 
 class CategoryController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new CategorySearch();
@@ -27,6 +39,7 @@ class CategoryController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('brand.create');
         $form = new CategoryForm([
             'scenario' => CategoryForm::SCENARIO_CREATE,
         ]);
@@ -51,6 +64,7 @@ class CategoryController extends BaseController
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('brand.update');
         $model = $this->findModel($id);
         $form = new CategoryForm([
             'scenario' => CategoryForm::SCENARIO_UPDATE,
@@ -76,6 +90,7 @@ class CategoryController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('brand.delete');
         $model = $this->findModel($id);
         if ($model->hasChildren()) {
             return $this->formatJson(false, null, 'Cannot delete category with active subcategories', 400);

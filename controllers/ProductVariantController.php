@@ -7,10 +7,22 @@ use app\models\forms\product_variant\ProductVariantForm;
 use app\models\ProductVariant;
 use app\models\search\ProductVariantSearch;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 
 class ProductVariantController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new ProductVariantSearch();
@@ -26,6 +38,7 @@ class ProductVariantController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('product.create');
         $form = new ProductVariantForm([
             'scenario' => ProductVariantForm::SCENARIO_CREATE,
         ]);
@@ -69,12 +82,13 @@ class ProductVariantController extends BaseController
 
             Yii::error($exception->getMessage(), __METHOD__);
 
-            return $this->formatJson(false, $exception->getMessage(), 'Internal server error', 500, );
+            return $this->formatJson(false, $exception->getMessage(), 'Internal server error', 500);
         }
     }
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('product.update');
         $model = $this->findModel($id);
         $form = new ProductVariantForm([
             'scenario' => ProductVariantForm::SCENARIO_UPDATE,
@@ -121,6 +135,7 @@ class ProductVariantController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('product.delete');
         $model = $this->findModel($id);
         try {
             ResourceImageHelper::deleteImageResourceLinks('product_variant', $model->id);
@@ -134,6 +149,7 @@ class ProductVariantController extends BaseController
 
         return $this->formatJson(false, null, 'Failed to delete product variant', 500);
     }
+
     public function findModel($id)
     {
         $model = ProductVariantForm::find()
@@ -146,6 +162,7 @@ class ProductVariantController extends BaseController
         }
         return $model;
     }
+
     private function loadVariantForm(ProductVariantForm $form): void
     {
         $request = Yii::$app->request;

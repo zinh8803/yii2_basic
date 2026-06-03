@@ -3,27 +3,42 @@
 namespace app\controllers;
 
 use app\models\AttributeValue;
-use app\models\ProductAttribute;
 use app\models\forms\product_attribute\ProductAttributeForm;
+use app\models\ProductAttribute;
 use app\models\search\ProductAttributeSearch;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 
 class ProductAttributeController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new ProductAttributeSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
         return $this->formatJson(true, $dataProvider, 'Product attributes retrieved successfully');
     }
+
     public function actionView($id)
     {
         $model = $this->findModel($id);
         return $this->formatJson(true, $model, 'Product attribute retrieved successfully');
     }
+
     public function actionCreate()
     {
+        $this->checkPermission('productAttribute.create');
         $form = new ProductAttributeForm([
             'scenario' => ProductAttributeForm::SCENARIO_CREATE,
         ]);
@@ -56,8 +71,10 @@ class ProductAttributeController extends BaseController
             return $this->formatJson(false, null, $e->getMessage(), 500);
         }
     }
+
     public function actionUpdate($id)
     {
+        $this->checkPermission('productAttribute.update');
         $model = $this->findModel($id);
         $form = new ProductAttributeForm([
             'scenario' => ProductAttributeForm::SCENARIO_UPDATE,
@@ -102,6 +119,7 @@ class ProductAttributeController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('productAttribute.delete');
         $model = $this->findModel($id);
 
         $transaction = Yii::$app->db->beginTransaction();

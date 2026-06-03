@@ -2,12 +2,10 @@
 
 namespace app\models\forms\Order;
 
-use app\models\User;
 use yii\base\Model;
 
 class CreateOrderForm extends Model
 {
-    public $user_id;
     public $email;
     public $receiver_name;
     public $receiver_phone;
@@ -31,8 +29,8 @@ class CreateOrderForm extends Model
             [['shipping_fee'], 'default', 'value' => 0],
             [['payment_status'], 'default', 'value' => 'pending'],
             [['status'], 'default', 'value' => 'pending'],
-            [['user_id', 'email', 'receiver_phone', 'payment_method'], 'required'],
-            [['user_id', 'is_discounted'], 'integer'],
+            [['email', 'receiver_phone', 'payment_method'], 'required'],
+            [['is_discounted'], 'integer'],
             [['receiver_address', 'note'], 'string'],
             [['shipping_fee', 'discount_amount'], 'number'],
             [['email'], 'email'],
@@ -41,7 +39,6 @@ class CreateOrderForm extends Model
             [['payment_method', 'payment_status'], 'string', 'max' => 50],
             [['coupon_code'], 'string', 'max' => 50],
             [['order_items'], 'validateOrderItems', 'skipOnEmpty' => false],
-            [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],
         ];
     }
 

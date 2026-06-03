@@ -6,18 +6,30 @@ use app\components\ResourceImageHelper;
 use app\models\forms\Post\CreatePostForm;
 use app\models\forms\Post\UpdatePostForm;
 use app\models\forms\Post\UpdatePostStatusForm;
-use app\models\Posts;
 use app\models\PostProducts;
-use app\models\Taggables;
+use app\models\Posts;
 use app\models\response\Post\PostResponse;
 use app\models\search\PostSearch;
+use app\models\Taggables;
 use Yii;
 use yii\base\Model;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 use yii\web\UploadedFile;
 
 class PostController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new PostSearch();
@@ -41,8 +53,10 @@ class PostController extends BaseController
         }
         return $this->json(true, $model, 'Post retrieved successfully');
     }
+
     public function actionCreate()
     {
+        $this->checkPermission('post.create');
         $form = new CreatePostForm();
         $request = Yii::$app->request;
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
@@ -82,6 +96,7 @@ class PostController extends BaseController
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('post.update');
         $post = $this->findModel($id);
         $form = new UpdatePostForm();
         $form->id = $post->id;
@@ -140,6 +155,7 @@ class PostController extends BaseController
 
     public function actionUpdateStatus($id)
     {
+        $this->checkPermission('post.updateStatus');
         $form = new UpdatePostStatusForm();
         $post = $this->findModel($id);
         $form->id = $post->id;
@@ -160,6 +176,7 @@ class PostController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('post.delete');
         try {
             $post = $this->findModel($id);
             ResourceImageHelper::deleteImageRecords('post', $post->id);
@@ -243,10 +260,11 @@ class PostController extends BaseController
     }
 
     private function attachPostImageFromForm(
-        Posts $post,
+        Posts                         $post,
         CreatePostForm|UpdatePostForm $form,
-        bool $replacePrimary = false
-    ): void {
+        bool                          $replacePrimary = false
+    ): void
+    {
         if (
             !$form->imageFile instanceof UploadedFile
             && empty($form->image_file_id)

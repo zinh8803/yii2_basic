@@ -6,10 +6,22 @@ use app\models\forms\Tag\TagForm;
 use app\models\search\TagSearch;
 use app\models\Tag;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 
 class TagController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new TagSearch();
@@ -25,6 +37,7 @@ class TagController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('tag.create');
         $form = new TagForm([
             'scenario' => TagForm::SCENARIO_CREATE
         ]);
@@ -47,6 +60,7 @@ class TagController extends BaseController
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('tag.update');
         $model = $this->findModel($id);
         $form = new TagForm([
             'scenario' => TagForm::SCENARIO_UPDATE
@@ -75,6 +89,7 @@ class TagController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('tag.delete');
         $model = $this->findModel($id);
         try {
             if ($model->delete()) {

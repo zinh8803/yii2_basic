@@ -9,11 +9,21 @@ use app\models\Products;
 use app\models\Reviews;
 use app\models\search\ReviewSearch;
 use Yii;
-use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
+use yii\filters\auth\HttpBearerAuth;
 
 class ReviewController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new ReviewSearch();
@@ -30,6 +40,7 @@ class ReviewController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('review.create');
         $form = new CreateReviewForm();
         $form->load($this->request->bodyParams, '');
 
@@ -82,12 +93,13 @@ class ReviewController extends BaseController
         } catch (\Throwable $exception) {
             $transaction->rollBack();
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, $exception->getMessage() , 500);
+            return $this->json(false, null, $exception->getMessage(), 500);
         }
     }
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('review.update');
         $model = $this->findModel($id);
 
         $model->load($this->request->bodyParams, '');
@@ -130,6 +142,7 @@ class ReviewController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('review.delete');
         try {
             $model = $this->findModel($id);
             if ($model->delete()) {

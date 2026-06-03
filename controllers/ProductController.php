@@ -8,11 +8,23 @@ use app\models\forms\Product\ProductForm;
 use app\models\Product;
 use app\models\search\ProductSearch;
 use Yii;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
 use yii\web\UploadedFile;
 
 class ProductController extends BaseController
 {
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new ProductSearch();
@@ -29,6 +41,7 @@ class ProductController extends BaseController
 
     public function actionCreate()
     {
+        $this->checkPermission('product.create');
         $form = new ProductForm([
             'scenario' => ProductForm::SCENARIO_CREATE,
         ]);
@@ -55,6 +68,7 @@ class ProductController extends BaseController
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('product.update');
         $product = $this->findModel($id);
         $form = new ProductForm([
             'scenario' => ProductForm::SCENARIO_UPDATE,
@@ -81,6 +95,7 @@ class ProductController extends BaseController
 
     public function actionDelete($id)
     {
+        $this->checkPermission('product.delete');
         $model = $this->findModel($id);
         try {
             ResourceImageHelper::deleteImageResourceLinks('product', $model->id);
