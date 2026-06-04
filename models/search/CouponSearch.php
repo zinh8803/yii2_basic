@@ -2,17 +2,18 @@
 
 namespace app\models\search;
 
+use app\models\Coupon;
+use app\models\response\CouponResponse;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Coupons;
-use app\models\response\Coupon\CouponResponse;
 
 /**
- * CouponSearch represents the model behind the search form of `app\models\Coupons`.
+ * CouponSearch represents the model behind the search form of `app\models\Coupon`.
  */
-class CouponSearch extends Coupons
+class CouponSearch extends Coupon
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
@@ -44,12 +45,15 @@ class CouponSearch extends Coupons
      */
     public function search($params, $formName = '')
     {
-        $query = CouponResponse::find()->active();
+        $query = Coupon::find()->active();
 
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

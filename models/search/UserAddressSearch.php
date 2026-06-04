@@ -4,12 +4,12 @@ namespace app\models\search;
 
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\UserAddresses;
+use app\models\UserAddress;
 
 /**
  * UserAddressSearch represents the model behind the search form of `app\models\UserAddresses`.
  */
-class UserAddressSearch extends UserAddresses
+class UserAddressSearch extends UserAddress
 {
     /**
      * {@inheritdoc}
@@ -41,12 +41,15 @@ class UserAddressSearch extends UserAddresses
      */
     public function search($params, $formName = '')
     {
-        $query = UserAddresses::find();
+        $query = UserAddress::find();
 
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

@@ -6,8 +6,6 @@ use app\models\response\File\FileResponse;
 
 class FileController extends BaseController
 {
-    public $modelClass = 'app\models\Files';
-
     public function actionIndex($resource_type = null)
     {
         $query = FileResponse::find()

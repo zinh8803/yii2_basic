@@ -3,48 +3,45 @@
 namespace app\controllers;
 
 use app\components\ResourceImageHelper;
-use app\models\forms\Post\CreatePostForm;
-use app\models\forms\Post\UpdatePostForm;
+use app\models\forms\Post\PostForm;
 use app\models\forms\Post\UpdatePostStatusForm;
-use app\models\Posts;
-use app\models\PostProducts;
-use app\models\Taggables;
-use app\models\response\Post\PostResponse;
+use app\models\Post;
+use app\models\PostHandler;
 use app\models\search\PostSearch;
 use Yii;
-use yii\base\Model;
+use yii\filters\auth\HttpBearerAuth;
 use yii\web\NotFoundHttpException;
-use yii\web\UploadedFile;
 
 class PostController extends BaseController
 {
-    public $modelClass = 'app\models\Posts';
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['authenticator'] = [
+            'class' => HttpBearerAuth::class,
+            'except' => ['index', 'view'],
+        ];
+
+        return $behaviors;
+    }
+
     public function actionIndex()
     {
         $searchModel = new PostSearch();
         $dataProvider = $searchModel->search($this->request->queryParams);
-        $data = $this->paginate($dataProvider->query);
-        return $this->json(true, $data, 'Posts retrieved successfully');
+        return $this->formatJson(true, $dataProvider, "Posts List");
     }
 
     public function actionView($id)
     {
-        $model = PostResponse::find()
-            ->with([
-                'taggables.tag',
-                'primaryResource.file',
-                'postProducts.product.primaryResource.file',
-            ])
-            ->where(['id' => $id])
-            ->one();
-        if (!$model) {
-            return $this->json(false, null, 'Post not found', 404);
-        }
-        return $this->json(true, $model, 'Post retrieved successfully');
+        $model = $this->findModel($id, true);
+        return $this->formatJson(true, $model, 'Post retrieved successfully');
     }
+
     public function actionCreate()
     {
-        $form = new CreatePostForm();
+        $this->checkPermission('post.create');
+        $form = new PostForm(['scenario' => PostForm::SCENARIO_CREATE]);
         $request = Yii::$app->request;
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
         if ($isMultipart) {
@@ -54,38 +51,36 @@ class PostController extends BaseController
         } else {
             $form->load($this->request->bodyParams, '');
         }
+        $userId = Yii::$app->user->id;
+        $form->user_id = $userId;
+
         if ($form->validate()) {
-            $post = new Posts();
-            $post->setAttributes($form->attributes, false);
-            $post->published_at = $form->status === 'published' ? time() : null;
             $transaction = Yii::$app->db->beginTransaction();
             try {
-                if (!$post->save()) {
-                    $this->addModelErrors($form, $post);
+                $post = (new PostHandler())->createFromForm($form);
+                if ($post === null) {
                     throw new \RuntimeException('Failed to save post.');
                 }
 
-                $this->syncPostProducts($post, $this->normalizeIdArray($form->products));
-                $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
-                $this->attachPostImageFromForm($post, $form);
                 $transaction->commit();
-                return $this->json(true, $post, 'Post created successfully', 201);
+                return $this->formatJson(true, $post, 'Post created successfully', 201);
             } catch (\Throwable $e) {
                 if ($transaction->isActive) {
                     $transaction->rollBack();
                 }
                 Yii::error($e->getMessage(), __METHOD__);
+                return $this->formatJson(false, $e->getMessage(), 'Validation failed', 422);
             }
         }
 
-        return $this->json(false, $form->errors, 'Validation failed', 422);
+        return $this->formatJson(false, $form->errors, 'Validation failed', 422);
     }
 
     public function actionUpdate($id)
     {
+        $this->checkPermission('post.update');
         $post = $this->findModel($id);
-        $form = new UpdatePostForm();
-        $form->id = $post->id;
+        $form = new PostForm(['scenario' => PostForm::SCENARIO_UPDATE]);
 
         $request = Yii::$app->request;
         $isMultipart = strpos((string) $request->getContentType(), 'multipart/form-data') !== false;
@@ -98,9 +93,12 @@ class PostController extends BaseController
             $data = $request->bodyParams;
         }
         $form->load($data, '');
+        $form->id = $post->id;
+        $userId = Yii::$app->user->id;
+        $form->user_id = $userId;
 
         if ($isMultipart && empty($data) && $form->imageFile === null) {
-            return $this->json(
+            return $this->formatJson(
                 false,
                 null,
                 'PUT/PATCH multipart/form-data is not supported by PHP. Use POST with _method=PUT or send JSON body.',
@@ -109,225 +107,78 @@ class PostController extends BaseController
         }
 
         if (!$form->validate()) {
-            return $this->json(false, $form->errors, 'Validation failed', 422);
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
         }
 
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            $this->applyFormToPost($post, $form);
-
-            if (!$post->save()) {
-                $this->addModelErrors($form, $post);
+            $post = (new PostHandler())->updateFromForm($post, $form);
+            if ($post === null) {
                 throw new \RuntimeException('Failed to save post.');
             }
 
-            if ($form->products !== null) {
-                $this->syncPostProducts($post, $this->normalizeIdArray($form->products));
-            }
-            if ($form->tag_ids !== null) {
-                $this->syncPostTags($post, $this->normalizeIdArray($form->tag_ids));
-            }
-            $this->attachPostImageFromForm($post, $form, true);
             $transaction->commit();
-            return $this->json(true, $post, 'Post updated successfully');
+            return $this->formatJson(true, $post, 'Post updated successfully');
         } catch (\Throwable $e) {
             if ($transaction->isActive) {
                 $transaction->rollBack();
             }
             Yii::error($e->getMessage(), __METHOD__);
-            return $this->json(false, $form->errors, 'Validation failed', 422);
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
         }
     }
 
     public function actionUpdateStatus($id)
     {
+        $this->checkPermission('post.updateStatus');
         $form = new UpdatePostStatusForm();
         $post = $this->findModel($id);
         $form->id = $post->id;
         $form->status = Yii::$app->request->post('status');
 
-        if (!in_array($form->status, ['draft', 'published', 'archived'])) {
-            return $this->json(false, null, 'Invalid status value', 422);
+        if (!$form->validate()) {
+            return $this->formatJson(false, $form->errors, 'Validation failed', 422);
         }
 
-        $post->status = $form->status;
-        $post->published_at = $form->status === 'published' ? time() : null;
-        if ($post->save()) {
-            return $this->json(true, $post, 'Post status updated successfully');
+        if ((new PostHandler())->updateStatus($post, $form->status)) {
+            return $this->formatJson(true, $post, 'Post status updated successfully');
         }
 
-        return $this->json(false, $post->errors, 'Failed to update post status', 422);
+        return $this->formatJson(false, $post->errors, 'Failed to update post status', 422);
     }
 
     public function actionDelete($id)
     {
+        $this->checkPermission('post.delete');
         try {
             $post = $this->findModel($id);
-            ResourceImageHelper::deleteImageRecords('post', $post->id);
-            if ($post->delete()) {
-                return $this->json(true, null, 'Post deleted successfully');
+            if ((new PostHandler())->deletePost($post)) {
+                return $this->formatJson(true, null, 'Post deleted successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
-            return $this->json(false, null, 'Internal server error', 500);
+            return $this->formatJson(false, null, 'Internal server error', 500);
         }
 
-        return $this->json(false, null, 'Failed to delete post', 500);
+        return $this->formatJson(false, null, 'Failed to delete post', 500);
     }
 
-    protected function findModel($id)
+    protected function findModel($id, bool $withRelations = false)
     {
-        if (($model = Posts::findOne(['id' => $id])) !== null) {
-            return $model;
+        $query = Post::find()->where(['id' => $id]);
+        if ($withRelations) {
+            $query->with([
+                'taggables.tag',
+                'primaryResource.file',
+                'postProducts.product.primaryResource.file',
+            ]);
         }
 
-        throw new NotFoundHttpException('The requested page does not exist.');
+        $model = $query->one();
+        if (!$model) {
+            throw new NotFoundHttpException('Post not found');
+        }
+        return $model;
     }
 
-    private function applyFormToPost(Posts $post, UpdatePostForm $form): void
-    {
-        if ($form->user_id !== null) {
-            $post->user_id = $form->user_id;
-        }
-        if ($form->title !== null) {
-            $post->title = $form->title;
-        }
-        if ($form->slug !== null) {
-            $post->slug = $form->slug;
-        }
-        if ($form->excerpt !== null) {
-            $post->excerpt = $form->excerpt;
-        }
-        if ($form->content !== null) {
-            $post->content = $form->content;
-        }
-        if ($form->status !== null) {
-            $post->status = $form->status;
-        }
-        if ($form->post_style !== null) {
-            $post->post_style = $form->post_style;
-        }
-        if ($form->meta_title !== null) {
-            $post->meta_title = $form->meta_title;
-        }
-        if ($form->meta_description !== null) {
-            $post->meta_description = $form->meta_description;
-        }
-        if ($form->published_at !== null) {
-            $post->published_at = $form->published_at;
-        }
-    }
-
-    private function normalizeIdArray($value): array
-    {
-        if ($value === null) {
-            return [];
-        }
-
-        if (is_array($value)) {
-            $items = $value;
-        } elseif (is_string($value)) {
-            $items = preg_split('/\s*,\s*/', $value, -1, PREG_SPLIT_NO_EMPTY);
-        } else {
-            $items = [$value];
-        }
-
-        $ids = [];
-        foreach ($items as $item) {
-            $id = (int) $item;
-            if ($id > 0) {
-                $ids[$id] = true;
-            }
-        }
-
-        return array_keys($ids);
-    }
-
-    private function attachPostImageFromForm(
-        Posts $post,
-        CreatePostForm|UpdatePostForm $form,
-        bool $replacePrimary = false
-    ): void {
-        if (
-            !$form->imageFile instanceof UploadedFile
-            && empty($form->image_file_id)
-            && empty($form->image_resource_id)
-        ) {
-            return;
-        }
-
-        if ($replacePrimary) {
-            ResourceImageHelper::markImagesNonPrimary('post', $post->id);
-        }
-
-        if ($form->imageFile instanceof UploadedFile) {
-            ResourceImageHelper::attachImage('post', $post->id, $post->user_id, 'uploads/posts', $form->imageFile, $form);
-            return;
-        }
-
-        if (!empty($form->image_resource_id)) {
-            ResourceImageHelper::attachExistingImageResource('post', $post->id, (int) $form->image_resource_id);
-            return;
-        }
-
-        ResourceImageHelper::attachExistingImageFile('post', $post->id, (int) $form->image_file_id);
-    }
-
-    private function syncPostProducts(Posts $post, array $productIds): void
-    {
-        PostProducts::deleteAll(['post_id' => $post->id]);
-        if (empty($productIds)) {
-            return;
-        }
-
-        $sortOrder = 0;
-        foreach ($productIds as $productId) {
-            $postProduct = new PostProducts();
-            $postProduct->setAttributes([
-                'post_id' => $post->id,
-                'product_id' => (int) $productId,
-                'sort_order' => $sortOrder,
-            ], false);
-
-            if (!$postProduct->save()) {
-                throw new \RuntimeException('Failed to save post product: ' . json_encode($postProduct->errors));
-            }
-
-            $sortOrder++;
-        }
-    }
-
-    private function syncPostTags(Posts $post, array $tagIds): void
-    {
-        Taggables::deleteAll([
-            'post_id' => $post->id,
-            'type' => 'post',
-        ]);
-
-        if (empty($tagIds)) {
-            return;
-        }
-
-        foreach ($tagIds as $tagId) {
-            $taggable = new Taggables();
-            $taggable->setAttributes([
-                'tag_id' => (int) $tagId,
-                'post_id' => $post->id,
-                'type' => 'post',
-            ], false);
-
-            if (!$taggable->save()) {
-                throw new \RuntimeException('Failed to save taggable: ' . json_encode($taggable->errors));
-            }
-        }
-    }
-
-    private function addModelErrors(Model $form, Model $model): void
-    {
-        foreach ($model->getErrors() as $attribute => $messages) {
-            foreach ($messages as $message) {
-                $form->addError($attribute, $message);
-            }
-        }
-    }
 }

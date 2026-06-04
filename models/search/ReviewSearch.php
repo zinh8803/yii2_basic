@@ -2,12 +2,12 @@
 
 namespace app\models\search;
 
-use app\models\response\Review\ReviewResponse;
-use app\models\Reviews;
+use app\models\response\ReviewResponse;
+use app\models\Review;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-class ReviewSearch extends Reviews
+class ReviewSearch extends Review
 {
     public $keyword;
 
@@ -26,8 +26,13 @@ class ReviewSearch extends Reviews
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = ReviewResponse::find();
-        $dataProvider = new ActiveDataProvider(['query' => $query]);
+        $query = Review::find();
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
+        ]);
 
         $this->load($params, $formName);
         if (!$this->validate()) {

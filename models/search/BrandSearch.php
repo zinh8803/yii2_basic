@@ -2,25 +2,26 @@
 
 namespace app\models\search;
 
+use app\models\Brand;
+use app\models\response\BrandResponse;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Brands;
-use app\models\response\Brand\BrandResponse;
 
 /**
- * BrandSearch represents the model behind the search form of `app\models\Brands`.
+ * BrandSearch represents the model behind the search form of `app\models\Brand`.
  */
-class BrandSearch extends Brands
+class BrandSearch extends Brand
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['id', 'created_at', 'updated_at'], 'integer'],
-            [['name', 'slug', 'status', 'keyword'], 'safe'],
+            [['id', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
+            [['name', 'slug', 'status', 'is_deleted', 'keyword'], 'safe'],
         ];
     }
 
@@ -41,18 +42,35 @@ class BrandSearch extends Brands
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = '', $active = true)
+    public function search($params, $formName = '', $active = null, string $deletedMode = 'normal'
+    )
     {
-        $query = BrandResponse::find();
+        $query = Brand::find();
 
         if ($active) {
-            $query->andWhere(['status' => 1]);
+            $query->active();
+        }
+
+        switch ($deletedMode) {
+            case 'normal':
+                $query->notDeleted();
+                break;
+
+            case 'trash':
+                $query->deleted();
+                break;
+
+            case 'all':
+                break;
         }
 
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

@@ -2,15 +2,15 @@
 
 namespace app\models\search;
 
+use app\models\response\TagResponse;
+use app\models\Tag;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Tags;
-use app\models\response\Tag\TagResponse;
 
 /**
  * TagSearch represents the model behind the search form of `app\models\Tags`.
  */
-class TagSearch extends Tags
+class TagSearch extends Tag
 {
     /**
      * {@inheritdoc}
@@ -42,12 +42,15 @@ class TagSearch extends Tags
      */
     public function search($params, $formName = '')
     {
-        $query = TagResponse::find();
+        $query = Tag::find();
 
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

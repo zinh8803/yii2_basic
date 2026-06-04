@@ -2,25 +2,26 @@
 
 namespace app\models\search;
 
+use app\models\Category;
+use app\models\response\CategoryResponse;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Categories;
-use app\models\response\Category\CategoryResponse;
 
 /**
- * CategorySearch represents the model behind the search form of `app\models\Categories`.
+ * CategorySearch represents the model behind the search form of `app\models\Category`.
  */
-class CategorySearch extends Categories
+class CategorySearch extends Category
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['id', 'parent_id', 'created_at', 'updated_at', 'status'], 'integer'],
-            [['name', 'slug'], 'safe'],
+            [['id', 'parent_id', 'created_at', 'updated_at', 'status', 'deleted_at'], 'integer'],
+            [['name', 'slug', 'is_deleted'], 'safe'],
             [['name'], 'string', 'max' => 255],
             [['keyword'], 'safe'],
         ];
@@ -43,17 +44,34 @@ class CategorySearch extends Categories
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = '')
+    public function search($params, $formName = '', $active = null, string $deletedMode = 'normal')
     {
-        $query = CategoryResponse::find()
+        $query = Category::find()
             ->roots()
-            ->active()
-            ->with(['children']);
+            ->tree();
+        if ($active) {
+            $query->active();
+        }
 
+        switch ($deletedMode) {
+            case 'normal':
+                $query->notDeleted();
+                break;
+
+            case 'trash':
+                $query->deleted();
+                break;
+
+            case 'all':
+                break;
+        }
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
         ]);
 
         $this->load($params, $formName);

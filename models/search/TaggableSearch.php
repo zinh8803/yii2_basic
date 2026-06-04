@@ -2,11 +2,11 @@
 
 namespace app\models\search;
 
-use app\models\Taggables;
+use app\models\Taggable;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
-class TaggableSearch extends Taggables
+class TaggableSearch extends Taggable
 {
     public function rules()
     {
@@ -23,8 +23,13 @@ class TaggableSearch extends Taggables
 
     public function search($params, $formName = ''): ActiveDataProvider
     {
-        $query = Taggables::find();
-        $dataProvider = new ActiveDataProvider(['query' => $query]);
+        $query = Taggable::find();
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => [
+                'pageSize' => $params['per_page'] ?? 10,
+            ],
+        ]);
 
         $this->load($params, $formName);
         if (!$this->validate()) {

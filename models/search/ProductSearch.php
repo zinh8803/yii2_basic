@@ -2,17 +2,18 @@
 
 namespace app\models\search;
 
+use app\models\Product;
+use app\models\response\ProductResponse;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use app\models\Products;
-use app\models\response\Product\ProductResponse;
 
 /**
  * ProductSearch represents the model behind the search form of `app\models\Products`.
  */
-class ProductSearch extends Products
+class ProductSearch extends Product
 {
     public $keyword;
+
     /**
      * {@inheritdoc}
      */
@@ -45,14 +46,14 @@ class ProductSearch extends Products
      */
     public function search($params, $formName = '')
     {
-        $query = ProductResponse::find()->with(['primaryResource.file', 'productVariants']);
+        $query = Product::find()->with(['primaryResource.file', 'productVariants']);
 
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [
-                'pageSize' => 10,
+                'pageSize' => $params['per_page'] ?? 10,
             ],
         ]);
 
