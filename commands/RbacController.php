@@ -13,17 +13,23 @@ class RbacController extends Controller
         $auth->removeAll();
 
         $permissions = [
+            'brand.viewTrash',
             'category.index',
             'category.view',
             'category.create',
             'category.update',
-            'category.delete',
+            'category.softDelete',
+            'category.forceDelete',
+            'category.restore',
 
+            'brand.viewTrash',
             'brand.index',
             'brand.view',
             'brand.create',
             'brand.update',
-            'brand.delete',
+            'brand.softDelete',
+            'brand.forceDelete',
+            'brand.restore',
 
             'product.index',
             'product.view',

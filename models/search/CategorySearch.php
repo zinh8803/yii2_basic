@@ -20,8 +20,8 @@ class CategorySearch extends Category
     public function rules()
     {
         return [
-            [['id', 'parent_id', 'created_at', 'updated_at', 'status'], 'integer'],
-            [['name', 'slug'], 'safe'],
+            [['id', 'parent_id', 'created_at', 'updated_at', 'status', 'deleted_at'], 'integer'],
+            [['name', 'slug', 'is_deleted'], 'safe'],
             [['name'], 'string', 'max' => 255],
             [['keyword'], 'safe'],
         ];
@@ -44,13 +44,27 @@ class CategorySearch extends Category
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = '')
+    public function search($params, $formName = '', $active = null, string $deletedMode = 'normal')
     {
         $query = Category::find()
             ->roots()
-            ->active()
             ->tree();
+        if ($active) {
+            $query->active();
+        }
 
+        switch ($deletedMode) {
+            case 'normal':
+                $query->notDeleted();
+                break;
+
+            case 'trash':
+                $query->deleted();
+                break;
+
+            case 'all':
+                break;
+        }
         // add conditions that should always apply here
 
         $dataProvider = new ActiveDataProvider([

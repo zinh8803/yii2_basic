@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\behaviors\SoftDeleteBehavior;
 use app\behaviors\Timestamp;
 use app\models\base\BaseCategory;
 use yii\behaviors\SluggableBehavior;
@@ -20,6 +21,7 @@ class Category extends BaseCategory
                 return $model->children;
             },
             'status',
+            'is_deleted',
             'created_at' => function () {
                 return date('Y-m-d H:i:s', $this->created_at);
             },
@@ -27,6 +29,9 @@ class Category extends BaseCategory
             'updated_at' => function () {
                 return date('Y-m-d H:i:s', $this->updated_at);
             },
+            'deleted_at' => function () {
+                return $this->deleted_at ? date('Y-m-d H:i:s', $this->deleted_at) : null;
+            }
         ];
     }
 
@@ -48,6 +53,11 @@ class Category extends BaseCategory
     {
         return [
             Timestamp::class,
+            'softDelete' => [
+                'class' => SoftDeleteBehavior::class,
+                'attribute' => 'deleted_at',
+                'isDeletedAttribute' => 'is_deleted',
+            ],
             [
                 'class' => SluggableBehavior::class,
                 'attribute' => 'name',
@@ -69,5 +79,15 @@ class Category extends BaseCategory
     public function hasChildren()
     {
         return $this->getChildren()->exists();
+    }
+
+    public function softDelete(): bool
+    {
+        return $this->getBehavior('softDelete')->softDelete();
+    }
+
+    public function restore(): bool
+    {
+        return $this->getBehavior('softDelete')->restore();
     }
 }

@@ -20,13 +20,29 @@ class CategoryQuery extends ActiveQuery
     {
         return $this->andWhere(['parent_id' => $parentId]);
     }
+
     public function tree()
     {
         return $this->with([
             'children' => function ($query) {
-                $query->with('children');
+                $query->with('children')->notDeleted();
             },
             'parent',
         ]);
+    }
+
+    public function deleted()
+    {
+        return $this->andWhere(['is_deleted' => true]);
+    }
+
+    public function notDeleted()
+    {
+        return $this->andWhere(['is_deleted' => false]);
+    }
+
+    public function withDeleted()
+    {
+        return $this;
     }
 }

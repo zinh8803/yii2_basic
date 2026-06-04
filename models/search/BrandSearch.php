@@ -20,8 +20,8 @@ class BrandSearch extends Brand
     public function rules()
     {
         return [
-            [['id', 'created_at', 'updated_at'], 'integer'],
-            [['name', 'slug', 'status', 'keyword'], 'safe'],
+            [['id', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
+            [['name', 'slug', 'status', 'is_deleted', 'keyword'], 'safe'],
         ];
     }
 
@@ -42,12 +42,26 @@ class BrandSearch extends Brand
      *
      * @return ActiveDataProvider
      */
-    public function search($params, $formName = '', $active = true)
+    public function search($params, $formName = '', $active = null, string $deletedMode = 'normal'
+    )
     {
         $query = Brand::find();
 
         if ($active) {
-            $query->andWhere(['status' => 1]);
+            $query->active();
+        }
+
+        switch ($deletedMode) {
+            case 'normal':
+                $query->notDeleted();
+                break;
+
+            case 'trash':
+                $query->deleted();
+                break;
+
+            case 'all':
+                break;
         }
 
         // add conditions that should always apply here

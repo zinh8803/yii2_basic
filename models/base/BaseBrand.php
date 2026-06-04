@@ -3,7 +3,6 @@
 namespace app\models\base;
 
 use app\models\Product;
-use Yii;
 use yii\db\ActiveRecord;
 
 /**
@@ -15,6 +14,8 @@ use yii\db\ActiveRecord;
  * @property int $status
  * @property int|null $created_at
  * @property int|null $updated_at
+ * @property int|null $deleted_at
+ * @property bool $is_deleted
  *
  * @property Product[] $products
  */
@@ -38,12 +39,13 @@ class BaseBrand extends ActiveRecord
     {
         return [
             [['status'], 'default', 'value' => 1],
-            [['status'], 'in', 'range' => [0, 1]],
+            [['status', 'is_deleted'], 'in', 'range' => [0, 1]],
             [['name'], 'unique'],
             [['slug'], 'unique'],
             [['name', 'slug'], 'required'],
             [['name', 'slug'], 'string', 'max' => 255],
-            [['status'], 'integer'],
+            [['status', 'is_deleted'], 'integer'],
+            [['is_deleted'], 'default', 'value' => 0],
         ];
     }
 

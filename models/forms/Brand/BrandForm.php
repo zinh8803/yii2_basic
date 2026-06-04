@@ -12,7 +12,7 @@ class BrandForm extends Brand
     public function scenarios()
     {
         return [
-            self::SCENARIO_CREATE => ['name', 'status'],
+            self::SCENARIO_CREATE => ['name', 'status', 'is_deleted'],
             self::SCENARIO_UPDATE => ['name', 'status'],
         ];
     }
@@ -22,12 +22,11 @@ class BrandForm extends Brand
         return [
             [['status'], 'default', 'value' => 1, 'on' => self::SCENARIO_CREATE],
             [['name'], 'required', 'on' => self::SCENARIO_CREATE],
-
+            [['status', 'is_deleted'], 'default', 'value' => 0, 'on' => self::SCENARIO_CREATE],
             [['status'], 'integer'],
             [['status'], 'in', 'range' => [0, 1]],
-
-            [['name'], 'unique'],
-            [['slug'], 'unique'],
+            [['name'], 'unique', 'targetClass' => Brand::class, 'targetAttribute' => 'name', 'on' => self::SCENARIO_CREATE,],
+            [['name'], 'unique', 'targetClass' => Brand::class, 'targetAttribute' => 'name', 'filter' => (['!=', 'id', $this->id]), 'on' => self::SCENARIO_UPDATE,],
         ];
     }
 }

@@ -16,6 +16,7 @@ class BaseController extends Controller
     const HTTP_FORBIDDEN = 403;
     const HTTP_NOT_FOUND = 404;
     const HTTP_INTERNAL_SERVER_ERROR = 500;
+
     public function formatJson($status = true, $data = [], $message = "", $code = 200): array
     {
         Yii::$app->response->statusCode = $code;
@@ -28,6 +29,7 @@ class BaseController extends Controller
             "error" => null,
         ];
     }
+
     protected function successPaginate(ActiveDataProvider $dataProvider, string $message = 'Data retrieved successfully', $statusCode = 200): array
     {
         return [
@@ -44,6 +46,34 @@ class BaseController extends Controller
             'error' => null,
         ];
     }
+
+    public function paginate($query, int $defaultLimit = 10): array
+    {
+        $page = (int) Yii::$app->request->get('page', 1);
+        $limit = (int) Yii::$app->request->get('limit', $defaultLimit);
+        $maxLimit = 100;
+
+        $page = max(1, $page);
+        $limit = max(1, min($limit, $maxLimit));
+
+        $total = (clone $query)->count();
+
+        $models = $query
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->all();
+
+        return [
+            'data' => $models,
+            '_meta' => [
+                'totalCount' => (int) $total,
+                'pageCount' => (int) ceil($total / $limit),
+                'currentPage' => $page,
+                'perPage' => $limit,
+            ],
+        ];
+    }
+
     protected function checkPermission(string $permission): void
     {
         if (!Yii::$app->user->can($permission)) {

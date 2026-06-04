@@ -25,7 +25,7 @@ class BrandController extends BaseController
     public function actionIndex()
     {
         $searchModel = new BrandSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams, '', false);
+        $dataProvider = $searchModel->search($this->request->queryParams, '', true);
         return $this->successPaginate($dataProvider, 'Brands retrieved successfully');
     }
 
@@ -37,7 +37,7 @@ class BrandController extends BaseController
 
     public function actionCreate()
     {
-        $this->checkPermission('brand.create');
+        //     $this->checkPermission('brand.create');
         $form = new BrandForm([
             'scenario' => BrandForm::SCENARIO_CREATE,
         ]);
@@ -84,23 +84,67 @@ class BrandController extends BaseController
 
     public function actionDelete($id)
     {
-        $this->checkPermission('brand.delete');
+        $this->checkPermission('brand.softDelete');
         $model = $this->findModel($id);
         try {
-            if ($model->delete()) {
+            if ($model->softDelete()) {
                 return $this->formatJson(true, null, 'Brand deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->formatJson(false, $exception->getMessage(), 'Internal server error', self::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->formatJson(false, null, 'Failed to delete brand', self::HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    public function actionTrash()
+    {
+        $this->checkPermission('brand.viewTrash');
+        $searchModel = new BrandSearch();
+        $dataProvider = $searchModel->search($this->request->queryParams, '', null, 'trash');
+        return $this->successPaginate($dataProvider, 'Brands retrieved successfully');
+    }
+
+
+    public function actionRestore($id)
+    {
+        $this->checkPermission('brand.restore');
+        $model = $this->findModel($id);
+        try {
+            if ($model->restore()) {
+                return $this->formatJson(true, null, 'Brand restored successfully');
             }
         } catch (\Throwable $exception) {
             Yii::error($exception->getMessage(), __METHOD__);
             return $this->formatJson(false, null, 'Internal server error', self::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        return $this->formatJson(false, null, 'Failed to delete brand', self::HTTP_INTERNAL_SERVER_ERROR);
+        return $this->formatJson(false, null, 'Failed to restore brand', self::HTTP_INTERNAL_SERVER_ERROR);
     }
+
+    public function actionForceDelete($id)
+    {
+        $this->checkPermission('brand.forceDelete');
+        $model = $this->findModel($id);
+        try {
+            if ($model->delete()) {
+                return $this->formatJson(true, null, 'Brand permanently deleted successfully');
+            }
+        } catch (\Throwable $exception) {
+            Yii::error($exception->getMessage(), __METHOD__);
+            return $this->formatJson(false, null, 'Internal server error', self::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->formatJson(false, null, 'Failed to permanently delete brand', self::HTTP_INTERNAL_SERVER_ERROR);
+    }
+
 
     public function findModel($id)
     {
-        $model = BrandForm::findOne($id);
+        $model = BrandForm::find()
+            ->where(['id' => $id])
+            ->one();
         if (!isset($model)) {
             throw new NotFoundHttpException('Brand not found');
         }

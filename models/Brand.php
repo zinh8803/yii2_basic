@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\behaviors\SoftDeleteBehavior;
 use app\behaviors\Timestamp;
 use app\models\base\BaseBrand;
 use yii\behaviors\SluggableBehavior;
@@ -16,12 +17,16 @@ class Brand extends BaseBrand
             'name',
             'slug',
             'status',
+            'is_deleted',
             'created_at' => function () {
                 return date('Y-m-d H:i:s', $this->created_at);
             },
 
             'updated_at' => function () {
                 return date('Y-m-d H:i:s', $this->updated_at);
+            },
+            'deleted_at' => function () {
+                return $this->deleted_at ? date('Y-m-d H:i:s', $this->deleted_at) : null;
             },
         ];
     }
@@ -35,11 +40,25 @@ class Brand extends BaseBrand
     {
         return [
             Timestamp::class,
+            'softDelete' => [
+                'class' => SoftDeleteBehavior::class,
+                'attribute' => 'deleted_at',
+                'isDeletedAttribute' => 'is_deleted',
+            ],
             [
                 'class' => SluggableBehavior::class,
                 'attribute' => 'name',
                 'slugAttribute' => 'slug',
             ],
         ];
+    }
+    public function softDelete(): bool
+    {
+        return $this->getBehavior('softDelete')->softDelete();
+    }
+
+    public function restore(): bool
+    {
+        return $this->getBehavior('softDelete')->restore();
     }
 }
