@@ -418,6 +418,8 @@ final class ResourceImageHelper extends Component
             throw new \RuntimeException('Failed to save image resource: ' . json_encode($resource->errors));
         }
 
+        $resource->populateRelation('file', $file);
+
         return $resource;
     }
 
