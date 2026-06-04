@@ -18,9 +18,8 @@ class m260602_093134_update_cart_items_table extends Migration
      */
     public function safeDown()
     {
-        echo "m260602_093134_update_cart_items_table cannot be reverted.\n";
-
-        return false;
+        $this->dropColumn('cart_items', 'created_at');
+        $this->dropColumn('cart_items', 'updated_at');
     }
 
     /*
