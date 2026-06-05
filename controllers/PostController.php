@@ -19,7 +19,7 @@ class PostController extends BaseController
         $behaviors = parent::behaviors();
         $behaviors['authenticator'] = [
             'class' => HttpBearerAuth::class,
-            'except' => ['index', 'view'],
+            'except' => ['index', 'view', 'post'],
         ];
 
         return $behaviors;
@@ -181,4 +181,10 @@ class PostController extends BaseController
         return $model;
     }
 
+    public function actionPost()
+    {
+        $data = Yii::$app->postApi->getPosts();
+
+        return $this->formatJson(true, $data, 'Success');
+    }
 }
